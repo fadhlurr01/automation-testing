@@ -3,7 +3,7 @@
 import {
   Activity, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronDown,
   CircleHelp, LayoutDashboard, Library, Link2, Menu,
-  PenLine, Plus, Search, Settings, Sparkles, Target, X,
+  PenLine, Plus, Rocket, Search, Settings, Sparkles, Target, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,7 @@ export type NavItem = {
 export const navigationItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Campaigns", icon: Target, href: "/campaigns" },
+  { label: "Publish Center", icon: Rocket, href: "/publish", badge: "Live" },
   { label: "Content Studio", icon: PenLine, href: "/content-studio" },
   { label: "Channels", icon: Link2, href: "/channels", badge: "4" },
   { label: "Calendar", icon: CalendarDays, href: "/calendar" },

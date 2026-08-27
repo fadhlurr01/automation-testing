@@ -3,7 +3,7 @@
 import {
   Activity, ArrowUpRight, BarChart3, Bell, CalendarDays, ChevronDown,
   CircleHelp, FileText, ImagePlus, LayoutDashboard, Library, Link2, Menu,
-  PenLine, Plus, Search, Settings, Sparkles, Target, X,
+  PenLine, Plus, Rocket, Search, Settings, Sparkles, Target, X,
 } from "lucide-react";
 import Link from "next/link";
 import UserMenu from "@/components/user-menu";
@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 const navigation = [
   ["Dashboard", LayoutDashboard, "/dashboard"],
   ["Campaigns", Target, "/campaigns"],
+  ["Publish Center", Rocket, "/publish"],
   ["Content Studio", PenLine, "/content-studio"],
   ["Channels", Link2, "/channels"],
   ["Calendar", CalendarDays, "/calendar"],
