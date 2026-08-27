@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, CircleAlert, CheckCircle2, Loader2, Link2, Search, Unplug, Wifi } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Check, CircleAlert, CheckCircle2, Loader2, Link2, Search, Unplug, Wifi } from "lucide-react";
 
 type Channel = {
   name: string;
@@ -202,6 +203,9 @@ export default function ChannelManager() {
     <main className="channels-page">
       <header className="channels-heading">
         <div>
+          <Link href="/dashboard" className="back-link" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#168f83", textDecoration: "none", marginBottom: 8, fontWeight: 600 }}>
+            <ArrowLeft size={14} /> Back to Dashboard
+          </Link>
           <p className="eyebrow">CHANNEL MANAGER</p>
           <h1>Publishing connections</h1>
           <p className="intro">
