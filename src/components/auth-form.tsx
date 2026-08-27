@@ -21,16 +21,16 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     try {
       const supabase = createSupabaseBrowserClient();
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
         router.push("/dashboard");
       } else if (mode === "register") {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/auth/callback` } });
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/auth/callback` } });
         if (error) throw error;
         setMessage(data.session ? "Account created. Redirecting..." : "Account created. Check your email to confirm access.");
         if (data.session) router.push("/dashboard");
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` });
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/login` });
         if (error) throw error;
         setMessage("Password reset instructions sent. Check your email.");
       }
