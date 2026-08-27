@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPlatformAdapter } from "@/lib/publishing/adapters";
+import { recordAuditLog } from "@/lib/audit/audit-logger";
 
 /**
  * Controlled development testing route for validating platform adapters.
@@ -57,6 +58,15 @@ export async function POST(request: Request) {
       const verified = await adapter.verify(result, publishRequest.accessToken);
       logs.push(`Step 4: Post verification status: ${verified ? "CONFIRMED" : "UNVERIFIED"}`);
 
+      // Record Audit Log (Tokens are never logged)
+      await recordAuditLog({
+        actorName: "Publish Worker",
+        action: result.confirmed ? "PUBLISHING_SUCCESS" : "PUBLISHING_FAILURE",
+        entityType: "platform_target",
+        description: `${platform.toUpperCase()} ${result.confirmed ? "published confirmed post" : "failed to publish"}`,
+        status: result.confirmed ? "SUCCESS" : "FAILURE",
+      });
+
       return NextResponse.json({
         ok: true,
         mode: "live",
@@ -90,6 +100,15 @@ export async function POST(request: Request) {
     logs.push(`Step 4: Simulated post URL -> ${simulatedUrl}`);
     logs.push("Step 5: Simulated verification -> CONFIRMED 200 OK");
 
+    // Record Audit Log
+    await recordAuditLog({
+      actorName: "Publish Worker",
+      action: "PUBLISHING_SUCCESS",
+      entityType: "platform_target",
+      description: `${platform.toUpperCase()} published confirmed test post (ID: ${simulatedPostId})`,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({
       ok: true,
       mode: "mock",
@@ -109,10 +128,20 @@ export async function POST(request: Request) {
       logs,
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : "Test execution failed.";
+    // Record failure in audit log
+    await recordAuditLog({
+      actorName: "Publish Worker",
+      action: "PUBLISHING_FAILURE",
+      entityType: "platform_target",
+      description: `Publishing failure: ${errMsg}`,
+      status: "FAILURE",
+    });
+
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "Test execution failed.",
+        error: errMsg,
       },
       { status: 400 }
     );

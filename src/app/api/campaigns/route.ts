@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { recordAuditLog } from "@/lib/audit/audit-logger";
 
 const targetSchema = z.object({
   connectedAccountId: z.string().uuid().optional(),
@@ -205,6 +206,19 @@ export async function POST(request: Request) {
         }
       }
     }
+
+    // Record Audit Log
+    const action = parsed.data.status === "approved" ? "CAMPAIGN_APPROVAL" : parsed.data.status === "scheduled" ? "SCHEDULE" : "CAMPAIGN_CREATION";
+    await recordAuditLog({
+      organizationId: membership.organization_id,
+      actorId: user.id,
+      actorName: user.email?.split("@")[0] || "User",
+      action,
+      entityType: "campaign",
+      entityId: campaign.id,
+      description: `Campaign "${campaign.name}" created with status ${campaign.status.toUpperCase()}`,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ campaign, success: true }, { status: 201 });
   } catch (err) {

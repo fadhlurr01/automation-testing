@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { encryptToken } from "@/lib/oauth/tokens";
+import { recordAuditLog } from "@/lib/audit/audit-logger";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     const admin = createSupabaseAdminClient();
     const { data: membership } = await admin
       .from("users")
-      .select("organization_id")
+      .select("organization_id, full_name")
       .eq("id", user.id)
       .single();
 
@@ -203,6 +204,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Record Audit Log (Tokens are never logged)
+    await recordAuditLog({
+      organizationId: membership.organization_id,
+      actorId: user.id,
+      actorName: membership.full_name || user.email?.split("@")[0] || "User",
+      action: "CHANNEL_CONNECTION",
+      entityType: "connected_account",
+      entityId: connected.id,
+      description: `Connected channel ${platformRow.name} (${accountName})`,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({
       success: true,
       account: connected,
@@ -228,7 +241,7 @@ export async function DELETE(request: Request) {
     const admin = createSupabaseAdminClient();
     const { data: membership } = await admin
       .from("users")
-      .select("organization_id")
+      .select("organization_id, full_name")
       .eq("id", user.id)
       .single();
 
@@ -236,6 +249,8 @@ export async function DELETE(request: Request) {
 
     const { id } = await request.json();
     if (!id) return NextResponse.json({ error: "Account ID is required." }, { status: 400 });
+
+    const { data: acc } = await admin.from("connected_accounts").select("account_name").eq("id", id).single();
 
     await admin.from("oauth_tokens").delete().eq("connected_account_id", id);
     const { error } = await admin
@@ -245,6 +260,19 @@ export async function DELETE(request: Request) {
       .eq("organization_id", membership.organization_id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    // Record Audit Log
+    await recordAuditLog({
+      organizationId: membership.organization_id,
+      actorId: user.id,
+      actorName: membership.full_name || user.email?.split("@")[0] || "User",
+      action: "CHANNEL_DISCONNECTION",
+      entityType: "connected_account",
+      entityId: id,
+      description: `Disconnected channel ${acc?.account_name || id}`,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({ success: true, message: "Channel disconnected." });
   } catch (err) {
     return NextResponse.json(

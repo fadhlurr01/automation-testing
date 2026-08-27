@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getPlatformAdapter } from "@/lib/publishing/adapters";
 import { decryptToken } from "@/lib/oauth/tokens";
+import { recordAuditLog } from "@/lib/audit/audit-logger";
 
 /**
  * Background Scheduler Worker
@@ -160,6 +161,17 @@ export async function POST(request: Request) {
             status: "published",
           }).eq("id", target.id);
 
+          // Record Audit Log
+          await recordAuditLog({
+            organizationId: campaignRow?.organization_id,
+            actorName: "Scheduler Worker",
+            action: "PUBLISHING_SUCCESS",
+            entityType: "platform_target",
+            entityId: target.id,
+            description: `Scheduled publication completed for ${platformSlug.toUpperCase()} (${campaignRow?.name || "Campaign"})`,
+            status: "SUCCESS",
+          });
+
           results.push({
             jobId: job.id,
             platform: platformSlug,
@@ -176,6 +188,17 @@ export async function POST(request: Request) {
           await admin.from("campaign_targets").update({
             status: "failed",
           }).eq("id", target.id);
+
+          // Record Audit Log
+          await recordAuditLog({
+            organizationId: campaignRow?.organization_id,
+            actorName: "Scheduler Worker",
+            action: "PUBLISHING_FAILURE",
+            entityType: "platform_target",
+            entityId: target.id,
+            description: `Scheduled publication failed on ${platformSlug.toUpperCase()}: ${errMsg}`,
+            status: "FAILURE",
+          });
 
           results.push({
             jobId: job.id,
