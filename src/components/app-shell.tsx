@@ -3,7 +3,7 @@
 import {
   Activity, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronDown,
   CircleHelp, LayoutDashboard, Library, Link2, Menu,
-  PenLine, Plus, Rocket, Search, Settings, Sparkles, Target, X,
+  PenLine, Plus, Rocket, Search, Settings, ShieldCheck, Sparkles, Target, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +27,7 @@ export const navigationItems: NavItem[] = [
   { label: "Media Library", icon: Library, href: "/media" },
   { label: "AI Studio", icon: Sparkles, href: "/ai-studio" },
   { label: "Analytics", icon: BarChart3, href: "/analytics" },
+  { label: "Audit Logs", icon: ShieldCheck, href: "/audit-logs" },
 ];
 
 interface AppShellProps {

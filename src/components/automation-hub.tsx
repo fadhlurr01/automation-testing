@@ -3,7 +3,7 @@
 import {
   Activity, ArrowUpRight, BarChart3, Bell, CalendarDays, ChevronDown,
   CircleHelp, FileText, ImagePlus, LayoutDashboard, Library, Link2, Menu,
-  PenLine, Plus, Rocket, Search, Settings, Sparkles, Target, X,
+  PenLine, Plus, Rocket, Search, Settings, ShieldCheck, Sparkles, Target, X,
 } from "lucide-react";
 import Link from "next/link";
 import UserMenu from "@/components/user-menu";
@@ -19,6 +19,7 @@ const navigation = [
   ["Media Library", Library, "/media"],
   ["AI Studio", Sparkles, "/ai-studio"],
   ["Analytics", BarChart3, "/analytics"],
+  ["Audit Logs", ShieldCheck, "/audit-logs"],
 ] as const;
 
 type Icon = typeof Activity;
