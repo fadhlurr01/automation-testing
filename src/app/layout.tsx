@@ -4,6 +4,7 @@ import "./globals.css";
 import "./hub.css";
 import "./campaign.css";
 import "./transformer.css";
+import "./responsive.css";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
