@@ -35,9 +35,18 @@ type Channel = {
 
 const supportedPlatforms = [
   { slug: "pinterest", name: "Pinterest", type: "Pins & Boards", color: "#df6c47", bg: "#fff0eb" },
-  { slug: "medium", name: "Medium", type: "Articles & Stories", color: "#1a8f82", bg: "#eef8f5" },
-  { slug: "imgbox", name: "Imgbox", type: "Direct Image Host", color: "#3d70b8", bg: "#edf3fc" },
   { slug: "instagram", name: "Instagram", type: "Reels & Photos", color: "#b03a7a", bg: "#fcedf5" },
+  { slug: "medium", name: "Medium", type: "Articles & Stories", color: "#1a8f82", bg: "#eef8f5" },
+  { slug: "imgbb", name: "ImgBB", type: "Direct Image Host", color: "#3d70b8", bg: "#edf3fc" },
+  { slug: "facebook", name: "Facebook", type: "Pages & Stories", color: "#3b5998", bg: "#eef2ff" },
+  { slug: "twitter", name: "X / Twitter", type: "Posts & Media", color: "#1da1f2", bg: "#e8f5fd" },
+  { slug: "postimages", name: "Postimages", type: "Image Hosting", color: "#2b8a3e", bg: "#ebfbee" },
+  { slug: "publitio", name: "Publitio", type: "Cloud Media CDN", color: "#e8590c", bg: "#fff4e6" },
+  { slug: "wattpad", name: "Wattpad", type: "Stories & Chapters", color: "#ff6600", bg: "#fff0e6" },
+  { slug: "behance", name: "Behance", type: "Adobe Portfolio", color: "#1769ff", bg: "#e7f5ff" },
+  { slug: "pixabay", name: "Pixabay", type: "Stock Visuals", color: "#00ab6b", bg: "#e6f8f1" },
+  { slug: "unsplash", name: "Unsplash", type: "Visual Curation", color: "#111111", bg: "#f0f0f0" },
+  { slug: "pexels", name: "Pexels", type: "Free Photo Library", color: "#05a081", bg: "#e6f7f3" },
 ];
 
 const timezones = [
