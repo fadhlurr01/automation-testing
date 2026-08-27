@@ -17,6 +17,10 @@ import {
   X,
   Sparkles,
   HelpCircle,
+  BookOpen,
+  Info,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import ManualAssistModal from "@/components/manual-assist-modal";
 import { PreparedManualContent } from "@/lib/manual-assist/types";
@@ -43,6 +47,91 @@ const labels: Record<string, string> = {
   portfolio: "Portfolio & Creative (3)",
   stock_visuals: "Stock Visual Platforms (3)",
   other: "Community & Directory (3)",
+};
+
+// Step-by-step guides for obtaining API or connecting without API
+export const platformGuides: Record<
+  string,
+  {
+    requiresApi: boolean;
+    portalName: string;
+    portalUrl: string;
+    steps: string[];
+    note: string;
+  }
+> = {
+  medium: {
+    requiresApi: true,
+    portalName: "Medium Security & Integration Tokens",
+    portalUrl: "https://medium.com/me/settings/security",
+    steps: [
+      "Buka halaman Pengaturan Keamanan Medium: medium.com/me/settings/security",
+      "Gulir ke bawah ke bagian 'Integration tokens'",
+      "Ketik deskripsi token (contoh: 'Automation Hub')",
+      "Klik tombol 'Get integration token' dan salin kodenya ke form di bawah.",
+    ],
+    note: "Token ini memungkinkan aplikasi membuat draf artikel resmi langsung ke akun Medium Anda.",
+  },
+  pinterest: {
+    requiresApi: true,
+    portalName: "Pinterest Developer Portal",
+    portalUrl: "https://developers.pinterest.com/apps",
+    steps: [
+      "Buka Pinterest Developer Portal: developers.pinterest.com/apps",
+      "Buat App baru atau pilih App yang sudah ada",
+      "Masuk ke tab 'Trial Access' atau 'OAuth Keys'",
+      "Generate Access Token dengan izin (scope): pins:read, pins:write, boards:read",
+    ],
+    note: "Diperlukan untuk membuat Pin gambar dan memilih Board secara otomatis.",
+  },
+  instagram: {
+    requiresApi: true,
+    portalName: "Meta for Developers (Instagram Graph API)",
+    portalUrl: "https://developers.facebook.com/apps",
+    steps: [
+      "Buka Meta for Developers: developers.facebook.com/apps",
+      "Buat App bertipe 'Business' dan tambahkan produk 'Instagram Graph API'",
+      "Pastikan akun Instagram Anda bertipe Profesional/Bisnis dan ditautkan ke Facebook Page",
+      "Dapatkan User Token via Graph API Explorer dengan izin: instagram_basic, instagram_content_publish",
+    ],
+    note: "Menggunakan Meta Graph API resmi v25.0 untuk mempublikasikan foto dan reels.",
+  },
+  facebook: {
+    requiresApi: true,
+    portalName: "Meta Graph API Explorer",
+    portalUrl: "https://developers.facebook.com/tools/explorer",
+    steps: [
+      "Buka Meta Graph API Explorer",
+      "Pilih Halaman Bisnis (Facebook Page) Anda",
+      "Generate Page Access Token dengan izin: pages_show_list, pages_read_engagement, pages_manage_posts",
+    ],
+    note: "Digunakan untuk memposting otomatis ke Halaman Facebook.",
+  },
+  imgbb: {
+    requiresApi: true,
+    portalName: "ImgBB API Key Portal",
+    portalUrl: "https://api.imgbb.com/",
+    steps: [
+      "Buka portal API ImgBB: api.imgbb.com",
+      "Login menggunakan akun ImgBB Anda",
+      "Klik tombol biru 'Get API key'",
+      "Salin kunci 32 karakter yang muncul ke kolom token di bawah.",
+    ],
+    note: "Gratis dan langsung aktif tanpa masa tunggu verifikasi.",
+  },
+};
+
+const defaultNoApiGuide = {
+  requiresApi: false,
+  portalName: "Direct Web & Manual Assist",
+  portalUrl: "",
+  steps: [
+    "Platform ini TIDAK memerlukan API Key atau akun Developer berbayar.",
+    "Cukup masukkan Nama Akun / Username Anda pada form di bawah untuk registrasi.",
+    "Saat Anda ingin mempublikasikan konten, sistem akan menyiapkan 8 aset lengkap (Gambar HD, Judul, Deskripsi, Caption, Hashtag, Keywords, CTA, Link).",
+    "Klik tombol [Salin] dan [Buka Platform] untuk memposting dalam 5 detik dengan aman tanpa risiko banned.",
+  ],
+  note: "Mode Manual Assist 100% aman, tidak melanggar aturan platform, dan tidak memerlukan biaya langganan API tambahan.",
 };
 
 // 37 Verified User Platforms
@@ -122,6 +211,7 @@ export default function ChannelManager() {
 
   // Direct Connect Modal
   const [activeModalChannel, setActiveModalChannel] = useState<Channel | null>(null);
+  const [showGuideInModal, setShowGuideInModal] = useState(true);
   const [modalToken, setModalToken] = useState("");
   const [modalAccountName, setModalAccountName] = useState("");
   const [modalUsername, setModalUsername] = useState("");
@@ -181,6 +271,7 @@ export default function ChannelManager() {
 
   async function handleOpenConnect(channel: Channel) {
     setActiveModalChannel(channel);
+    setShowGuideInModal(true);
     setModalToken("");
     setModalAccountName("");
     setModalUsername("");
@@ -208,20 +299,20 @@ export default function ChannelManager() {
 
       if (response.ok) {
         setNotice({
-          message: `${activeModalChannel.name} connected successfully! Ready for automated publishing.`,
+          message: `✅ ${activeModalChannel.name} berhasil terhubung! Siap untuk distribusi konten.`,
           type: "success",
         });
         setActiveModalChannel(null);
         await loadConnected();
       } else {
         setNotice({
-          message: result.error || `Failed to connect ${activeModalChannel.name}.`,
+          message: result.error || `Gagal menghubungkan ${activeModalChannel.name}.`,
           type: "error",
         });
       }
     } catch (err) {
       setNotice({
-        message: err instanceof Error ? err.message : "Connection failed.",
+        message: err instanceof Error ? err.message : "Koneksi gagal.",
         type: "error",
       });
     } finally {
@@ -238,14 +329,14 @@ export default function ChannelManager() {
         body: JSON.stringify({ id: channel.connectedAccountId }),
       });
       if (res.ok) {
-        setNotice({ message: `${channel.name} disconnected.`, type: "success" });
+        setNotice({ message: `${channel.name} terputus.`, type: "success" });
         await loadConnected();
       } else {
         const err = await res.json();
-        setNotice({ message: err.error || "Failed to disconnect.", type: "error" });
+        setNotice({ message: err.error || "Gagal memutuskan koneksi.", type: "error" });
       }
     } catch {
-      setNotice({ message: "Network error during disconnection.", type: "error" });
+      setNotice({ message: "Kesalahan jaringan saat memutuskan.", type: "error" });
     }
   }
 
@@ -264,17 +355,17 @@ export default function ChannelManager() {
       const result = await response.json();
       if (response.ok && result.ok) {
         setNotice({
-          message: `Health Check Passed: ${channel.name} adapter & publishing engine verified!`,
+          message: `Health Check Berhasil: Adapter ${channel.name} siap dan terverifikasi!`,
           type: "success",
         });
       } else {
         setNotice({
-          message: `Health Check Alert: ${result.error || "Platform reported issue."}`,
+          message: `Health Check Alert: ${result.error || "Platform melaporkan kendala."}`,
           type: "error",
         });
       }
     } catch {
-      setNotice({ message: `Health Check network error for ${channel.name}.`, type: "error" });
+      setNotice({ message: `Kesalahan jaringan saat menguji ${channel.name}.`, type: "error" });
     } finally {
       setTestingPlatform(null);
     }
@@ -283,12 +374,12 @@ export default function ChannelManager() {
   function getPreparedMockContent(channel: Channel): PreparedManualContent {
     return {
       image: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200",
-      title: "Spring Launch Collection 2026",
-      description: "Explore the new automation workflow release with enhanced multi-channel distribution.",
-      caption: "Spring Launch Collection 2026 ✨ Multi-platform publishing engine is live! #automation #growth",
-      keywords: ["automation", "marketing", "publishing", "cloud"],
-      hashtags: ["#automation", "#launch2026", "#marketing", "#tools"],
-      cta: "Learn more at https://automation-testing-theta.vercel.app/",
+      title: "Peluncuran Koleksi Eksklusif 2026",
+      description: "Jelajahi alur kerja otomatisasi publikasi baru dengan distribusi multi-channel terpadu.",
+      caption: "Peluncuran Koleksi Eksklusif 2026 ✨ Distribusi multi-platform kini aktif! #otomasi #marketing",
+      keywords: ["otomasi", "marketing", "publikasi", "cloud"],
+      hashtags: ["#otomasi", "#launch2026", "#marketing", "#tools"],
+      cta: "Pelajari selengkapnya di https://automation-testing-theta.vercel.app/",
       destinationUrl: "https://automation-testing-theta.vercel.app/",
     };
   }
@@ -307,7 +398,7 @@ export default function ChannelManager() {
           onStatusChange={(status) => {
             if (status === "USER_CONFIRMED") {
               setNotice({
-                message: `Publication manually confirmed on ${manualAssistChannel.name}!`,
+                message: `Publikasi berhasil dikonfirmasi secara manual di ${manualAssistChannel.name}!`,
                 type: "success",
               });
             }
@@ -315,112 +406,191 @@ export default function ChannelManager() {
         />
       )}
 
-      {/* Direct Connection Modal */}
-      {activeModalChannel && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.65)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: 16,
-          }}
-        >
+      {/* Direct Connection Modal with Step-by-Step API Guide */}
+      {activeModalChannel && (() => {
+        const guide = platformGuides[activeModalChannel.slug] || defaultNoApiGuide;
+
+        return (
           <div
             style={{
-              background: "#fff",
-              borderRadius: 12,
-              maxWidth: 480,
-              width: "100%",
-              padding: 24,
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-              display: "grid",
-              gap: 16,
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(4px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: 16,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Key size={20} color="#159c8e" />
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
-                  Connect {activeModalChannel.name}
-                </h3>
-              </div>
-              <button
-                onClick={() => setActiveModalChannel(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#8a9899" }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p style={{ margin: 0, fontSize: 13, color: "#697b7c", lineHeight: 1.5 }}>
-              Enter your account username and access token/key to enable direct multi-channel distribution.
-            </p>
-
-            <form onSubmit={handleDirectConnectSubmit} style={{ display: "grid", gap: 14 }}>
-              <div>
-                <label className="field-label">Account / Display Name</label>
-                <input
-                  className="campaign-name"
-                  placeholder={`e.g. @my_${activeModalChannel.slug}_account`}
-                  value={modalAccountName}
-                  onChange={(e) => setModalAccountName(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="field-label">Username (Optional)</label>
-                <input
-                  className="campaign-name"
-                  placeholder="e.g. creator_arbi"
-                  value={modalUsername}
-                  onChange={(e) => setModalUsername(e.target.value)}
-                />
-              </div>
-
-              {activeModalChannel.api && (
-                <div>
-                  <label className="field-label">Integration Token / API Key (Optional)</label>
-                  <input
-                    type="password"
-                    className="campaign-name"
-                    placeholder="Enter API token or leave blank for direct web publishing"
-                    value={modalToken}
-                    onChange={(e) => setModalToken(e.target.value)}
-                  />
-                  <small style={{ color: "#8a9899", fontSize: 10, display: "block", marginTop: 4 }}>
-                    Tokens are strictly encrypted with AES-256-GCM and never shared with the frontend.
-                  </small>
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 12,
+                maxWidth: 540,
+                width: "100%",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                padding: 24,
+                boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+                display: "grid",
+                gap: 16,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Key size={20} color="#159c8e" />
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
+                    Hubungkan {activeModalChannel.name}
+                  </h3>
                 </div>
-              )}
-
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
                 <button
-                  type="button"
                   onClick={() => setActiveModalChannel(null)}
-                  className="text-button"
-                  style={{ padding: "8px 16px", fontSize: 12 }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#8a9899" }}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={connecting}
-                  className="primary-button"
-                  style={{ padding: "8px 20px", fontSize: 12 }}
-                >
-                  {connecting ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-                  {connecting ? "Connecting..." : "Confirm Connection"}
+                  <X size={18} />
                 </button>
               </div>
-            </form>
+
+              {/* Step-by-Step Guide Accordion */}
+              <div
+                style={{
+                  background: guide.requiresApi ? "#f0f9ff" : "#f6fdfb",
+                  border: guide.requiresApi ? "1px solid #bae6fd" : "1px solid #bbf7d0",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                }}
+              >
+                <div
+                  onClick={() => setShowGuideInModal(!showGuideInModal)}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: guide.requiresApi ? "#0369a1" : "#15803d",
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <BookOpen size={14} />
+                    {guide.requiresApi
+                      ? "📖 Panduan Langkah Mendapatkan Token / API Key"
+                      : "ℹ️ Informasi Koneksi: Tidak Memerlukan API Key"}
+                  </span>
+                  {showGuideInModal ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </div>
+
+                {showGuideInModal && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: "#334155", display: "grid", gap: 6 }}>
+                    <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5 }}>
+                      {guide.steps.map((st, idx) => (
+                        <li key={idx} style={{ marginBottom: 4 }}>
+                          {st}
+                        </li>
+                      ))}
+                    </ol>
+
+                    {guide.portalUrl && (
+                      <div style={{ marginTop: 6 }}>
+                        <a
+                          href={guide.portalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            color: "#0284c7",
+                            fontWeight: 700,
+                            textDecoration: "underline",
+                          }}
+                        >
+                          Buka Portal Developer {activeModalChannel.name} ↗
+                        </a>
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 4, fontStyle: "italic", color: "#64748b", fontSize: 11 }}>
+                      💡 {guide.note}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Input */}
+              <form onSubmit={handleDirectConnectSubmit} style={{ display: "grid", gap: 14 }}>
+                <div>
+                  <label className="field-label">Nama Akun / Display Name</label>
+                  <input
+                    className="campaign-name"
+                    placeholder={`Contoh: @akun_${activeModalChannel.slug}_saya`}
+                    value={modalAccountName}
+                    onChange={(e) => setModalAccountName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="field-label">Username (Opsional)</label>
+                  <input
+                    className="campaign-name"
+                    placeholder="Contoh: arbi_creator"
+                    value={modalUsername}
+                    onChange={(e) => setModalUsername(e.target.value)}
+                  />
+                </div>
+
+                {activeModalChannel.api ? (
+                  <div>
+                    <label className="field-label">
+                      Integration Token / API Key ({activeModalChannel.name})
+                    </label>
+                    <input
+                      type="password"
+                      className="campaign-name"
+                      placeholder="Tempel Access Token atau API Key Anda di sini"
+                      value={modalToken}
+                      onChange={(e) => setModalToken(e.target.value)}
+                    />
+                    <small style={{ color: "#8a9899", fontSize: 11, display: "block", marginTop: 4 }}>
+                      🔒 Token disimpan terenkripsi di server (AES-256-GCM) dan tidak akan pernah bocor ke frontend.
+                    </small>
+                  </div>
+                ) : (
+                  <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#475569" }}>
+                      ✅ <b>Platform Siap Pakai</b>: Akun ini siap didistribusikan melalui sistem <b>Manual Assist</b> tanpa perlu memasukkan kunci API.
+                    </p>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalChannel(null)}
+                    className="text-button"
+                    style={{ padding: "8px 16px", fontSize: 12 }}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={connecting}
+                    className="primary-button"
+                    style={{ padding: "8px 20px", fontSize: 12 }}
+                  >
+                    {connecting ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
+                    {connecting ? "Menghubungkan..." : "Konfirmasi & Simpan Akun"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Notice Banner */}
       {notice && (
@@ -428,7 +598,7 @@ export default function ChannelManager() {
           {notice.type === "success" ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}
           <span>{notice.message}</span>
           <button onClick={() => setNotice(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
-            Dismiss
+            ✕
           </button>
         </div>
       )}
@@ -438,22 +608,22 @@ export default function ChannelManager() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
             <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "var(--navy)" }}>
-              Verified Multi-Platform Channels (37 Active Platforms)
+              Saluran Multi-Platform Terverifikasi (37 Platform Aktif)
             </h2>
             <p style={{ margin: 0, fontSize: 13, color: "#697b7c" }}>
-              All 37 verified accounts ready for API connection, media uploads, and Manual Assist publishing.
+              Seluruh 37 akun aktif Anda siap untuk koneksi API langsung maupun Manual Assist (8 aset otomatis).
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div style={{ textAlign: "right" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#168f83", display: "block" }}>
-                {connectedTotal} Connected
+                {connectedTotal} Akun Terhubung
               </span>
-              <span style={{ fontSize: 10, color: "#8a9899" }}>37 Platforms Ready</span>
+              <span style={{ fontSize: 10, color: "#8a9899" }}>37 Platform Siap Pakai</span>
             </div>
             <Link href="/publish" className="primary-button" style={{ fontSize: 12, padding: "8px 16px" }}>
-              Go to Publish Center ↗
+              Ke Publish Center ↗
             </Link>
           </div>
         </div>
@@ -474,7 +644,7 @@ export default function ChannelManager() {
         <div className="channel-search" style={{ minWidth: 260 }}>
           <Search size={16} />
           <input
-            placeholder="Search 37 platforms (e.g. Pinterest, ImgBB, Wattpad, Pixabay)..."
+            placeholder="Cari platform (misal: Pinterest, ImgBB, Medium, Wattpad, Pixabay)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -494,7 +664,7 @@ export default function ChannelManager() {
               color: filter === "all" ? "#fff" : "#697b7c",
             }}
           >
-            All (37)
+            Semua (37)
           </button>
           {groups.map((g) => (
             <button
@@ -522,6 +692,7 @@ export default function ChannelManager() {
         {filtered.map((channel) => {
           const isConnected = channel.status === "connected";
           const isTesting = testingPlatform === channel.slug;
+          const guide = platformGuides[channel.slug] || defaultNoApiGuide;
 
           return (
             <div
@@ -557,13 +728,13 @@ export default function ChannelManager() {
                       color: isConnected ? "#159c8e" : "#697b7c",
                     }}
                   >
-                    {isConnected ? "CONNECTED" : "READY"}
+                    {isConnected ? "TERHUBUNG" : "SIAP PAKAI"}
                   </span>
                 </div>
 
                 {isConnected && channel.username && (
                   <p style={{ margin: "0 0 8px", fontSize: 12, color: "#168f83", fontWeight: 600 }}>
-                    Account: {channel.username}
+                    Akun: {channel.username}
                   </p>
                 )}
 
@@ -578,9 +749,11 @@ export default function ChannelManager() {
                       OAUTH 2.0
                     </span>
                   )}
-                  <span style={{ fontSize: 9, fontWeight: 700, background: "#f0f0f0", color: "#555", padding: "1px 5px", borderRadius: 3 }}>
-                    MANUAL ASSIST READY
-                  </span>
+                  {!channel.api && (
+                    <span style={{ fontSize: 9, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "1px 5px", borderRadius: 3 }}>
+                      TANPA API (MANUAL ASSIST)
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -602,7 +775,7 @@ export default function ChannelManager() {
                       className="text-button"
                       style={{ fontSize: 11, color: "#cf1322", border: "1px solid #fcc", padding: "4px 8px", borderRadius: 4 }}
                     >
-                      <Unplug size={12} /> Disconnect
+                      <Unplug size={12} /> Putus
                     </button>
                   </>
                 ) : (
@@ -612,7 +785,7 @@ export default function ChannelManager() {
                       className="primary-button"
                       style={{ fontSize: 11, padding: "5px 12px", borderRadius: 5 }}
                     >
-                      <Key size={12} /> Connect Account
+                      <Key size={12} /> Hubungkan Akun
                     </button>
                     <button
                       onClick={() => setManualAssistChannel(channel)}
@@ -630,7 +803,7 @@ export default function ChannelManager() {
                     target="_blank"
                     rel="noreferrer"
                     style={{ marginLeft: "auto", color: "#8a9899", display: "flex", alignItems: "center" }}
-                    title="Open platform website"
+                    title="Buka situs platform"
                   >
                     <ExternalLink size={14} />
                   </a>
