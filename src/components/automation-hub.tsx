@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import UserMenu from "@/components/user-menu";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const navigation = [
   ["Dashboard", LayoutDashboard, "/dashboard"],
@@ -19,12 +19,6 @@ const navigation = [
   ["AI Studio", Sparkles, "/ai-studio"],
   ["Analytics", BarChart3, "/analytics"],
 ] as const;
-
-const activities = [
-  ["Spring launch campaign", "Draft saved · Pinterest, Medium", "12 min ago", "teal"],
-  ["Product walkthrough.mp4", "Added to media library", "1 hr ago", "coral"],
-  ["Pinterest connection", "Verified active · @northstar", "3 hrs ago", "teal"],
-];
 
 type Icon = typeof Activity;
 
@@ -53,9 +47,96 @@ function MoreDots() {
   );
 }
 
+interface ActivityItem {
+  id: string;
+  title: string;
+  detail: string;
+  time: string;
+  tone: string;
+}
+
 export default function AutomationHub({ active = "Dashboard" }: { active?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [stats, setStats] = useState({
+    campaigns: 0,
+    content: 0,
+    channels: 0,
+    media: 0,
+  });
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const isDashboard = active === "Dashboard";
+
+  useEffect(() => {
+    async function loadWorkspaceData() {
+      try {
+        const [campRes, contRes, chanRes, medRes] = await Promise.all([
+          fetch("/api/campaigns"),
+          fetch("/api/content"),
+          fetch("/api/channels"),
+          fetch("/api/media"),
+        ]);
+
+        let campCount = 0;
+        let contCount = 0;
+        let chanCount = 0;
+        let medCount = 0;
+        const realActs: ActivityItem[] = [];
+
+        if (campRes.ok) {
+          const d = await campRes.json();
+          const camps = d.campaigns ?? [];
+          campCount = camps.length;
+          for (const c of camps.slice(0, 3)) {
+            realActs.push({
+              id: c.id,
+              title: c.name,
+              detail: `Campaign status: ${c.status || "draft"}`,
+              time: new Date(c.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              tone: "teal",
+            });
+          }
+        }
+
+        if (contRes.ok) {
+          const d = await contRes.json();
+          const contents = d.content ?? [];
+          contCount = contents.length;
+          for (const item of contents.slice(0, 2)) {
+            realActs.push({
+              id: item.id,
+              title: item.title || "Content draft",
+              detail: "Saved in Content Studio",
+              time: new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              tone: "coral",
+            });
+          }
+        }
+
+        if (chanRes.ok) {
+          const d = await chanRes.json();
+          const chs = d.channels ?? [];
+          chanCount = chs.filter((c: { status: string }) => c.status === "connected").length;
+        }
+
+        if (medRes.ok) {
+          const d = await medRes.json();
+          medCount = (d.assets ?? []).length;
+        }
+
+        setStats({
+          campaigns: campCount,
+          content: contCount,
+          channels: chanCount,
+          media: medCount,
+        });
+
+        setActivities(realActs);
+      } catch {
+        // Silently continue
+      }
+    }
+    loadWorkspaceData();
+  }, []);
 
   return (
     <div className="hub-frame">
@@ -77,8 +158,8 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
         <div className="workspace-switcher">
           <span className="workspace-avatar">N</span>
           <span>
-            <b>Northstar team</b>
-            <small>Workspace</small>
+            <b>Workspace</b>
+            <small>Production Environment</small>
           </span>
           <ChevronDown size={15} />
         </div>
@@ -109,10 +190,10 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
             Help center
           </a>
           <div className="profile">
-            <span className="profile-avatar">AS</span>
+            <span className="profile-avatar">U</span>
             <span>
-              <b>Alex Smith</b>
-              <small>Admin</small>
+              <b>Your Account</b>
+              <small>Workspace Owner</small>
             </span>
             <MoreDots />
           </div>
@@ -146,12 +227,12 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
         <div className="page-wrap">
           <div className="page-heading">
             <div>
-              <p className="eyebrow">THURSDAY, AUGUST 27, 2026</p>
-              <h1>{isDashboard ? "Good morning, Alex" : active}</h1>
+              <p className="eyebrow">AUTOMATION HUB WORKSPACE</p>
+              <h1>{isDashboard ? "Workspace Overview" : active}</h1>
               <p className="intro">
                 {isDashboard
-                  ? "Here is what is happening across your multi-channel workspace."
-                  : `${active} is configured and ready for your distribution pipeline.`}
+                  ? "Here is what is happening across your multi-channel distribution pipeline."
+                  : `${active} is ready for your content workflow.`}
               </p>
             </div>
             <Link className="primary-button" href="/campaigns/new">
@@ -163,86 +244,97 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
           {isDashboard ? (
             <>
               <section className="stat-grid">
-                <StatCard label="Active campaigns" value="08" meta="+2 this month" icon={Target} color="teal" />
-                <StatCard label="Content generated" value="142" meta="+18% from last month" icon={Sparkles} color="coral" />
-                <StatCard label="Connected channels" value="04" meta="Pinterest, Medium, Imgbox, IG" icon={Link2} color="teal" />
-                <StatCard label="Engagement rate" value="6.8%" meta="+0.9% from last month" icon={Activity} color="blue" />
+                <StatCard
+                  label="Active campaigns"
+                  value={String(stats.campaigns).padStart(2, "0")}
+                  meta={stats.campaigns > 0 ? "Configured campaigns" : "No campaigns created yet"}
+                  icon={Target}
+                  color="teal"
+                />
+                <StatCard
+                  label="Content generated"
+                  value={String(stats.content).padStart(2, "0")}
+                  meta={stats.content > 0 ? "Saved creative drafts" : "Create draft in Content Studio"}
+                  icon={Sparkles}
+                  color="coral"
+                />
+                <StatCard
+                  label="Connected channels"
+                  value={String(stats.channels).padStart(2, "0")}
+                  meta={stats.channels > 0 ? "Active connections" : "Connect Pinterest, Medium, etc."}
+                  icon={Link2}
+                  color="amber"
+                />
+                <StatCard
+                  label="Media assets"
+                  value={String(stats.media).padStart(2, "0")}
+                  meta={stats.media > 0 ? "Photos & videos uploaded" : "Upload media to library"}
+                  icon={ImagePlus}
+                  color="blue"
+                />
               </section>
 
               <section className="dashboard-grid">
                 <div className="panel activity-panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>Campaign overview</h2>
-                      <p>Performance across active distribution channels</p>
+                      <h2>Publishing Distribution</h2>
+                      <p>Active multi-platform automation support</p>
                     </div>
-                    <Link href="/analytics" className="text-button">
-                      View analytics <ArrowUpRight size={15} />
+                    <Link href="/channels" className="text-button">
+                      Manage Channels <ArrowUpRight size={15} />
                     </Link>
                   </div>
-                  <div className="chart-area">
-                    <div className="chart-y">
-                      <span>100k</span>
-                      <span>75k</span>
-                      <span>50k</span>
-                      <span>25k</span>
-                      <span>0</span>
+                  <div style={{ padding: "30px 10px", textAlign: "center" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginTop: 10 }}>
+                      {[
+                        { name: "Pinterest", type: "Pins & Boards", color: "#df6c47", bg: "#fff0eb" },
+                        { name: "Medium", type: "Articles & Stories", color: "#1a8f82", bg: "#eef8f5" },
+                        { name: "Imgbox", type: "Direct Image Host", color: "#3d70b8", bg: "#edf3fc" },
+                        { name: "Instagram", type: "Reels & Photos", color: "#b03a7a", bg: "#fcedf5" },
+                      ].map((p) => (
+                        <div key={p.name} style={{ padding: 14, borderRadius: 8, background: p.bg, textAlign: "left" }}>
+                          <b style={{ color: p.color, fontSize: 13, display: "block" }}>{p.name}</b>
+                          <small style={{ color: "#697b7c", fontSize: 10 }}>{p.type}</small>
+                        </div>
+                      ))}
                     </div>
-                    <div className="chart">
-                      <div className="chart-grid-lines" />
-                      <svg viewBox="0 0 700 220" preserveAspectRatio="none" aria-label="Campaign performance trend">
-                        <path
-                          className="chart-fill"
-                          d="M0 172 C55 170 60 132 118 150 S178 108 224 132 S284 93 338 114 S397 84 448 95 S510 42 562 72 S630 48 700 22 L700 220 L0 220Z"
-                        />
-                        <path
-                          className="chart-line"
-                          d="M0 172 C55 170 60 132 118 150 S178 108 224 132 S284 93 338 114 S397 84 448 95 S510 42 562 72 S630 48 700 22"
-                        />
-                      </svg>
-                      <div className="chart-x">
-                        <span>Aug 01</span>
-                        <span>Aug 08</span>
-                        <span>Aug 15</span>
-                        <span>Aug 22</span>
-                        <span>Aug 27</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="chart-legend">
-                    <span>
-                      <i className="legend-teal" />
-                      Impressions <b>284.6k</b>
-                    </span>
-                    <span>
-                      <i className="legend-coral" />
-                      Engagements <b>19.4k</b>
-                    </span>
                   </div>
                 </div>
 
                 <div className="panel activity-list">
                   <div className="panel-heading">
                     <div>
-                      <h2>Recent activity</h2>
-                      <p>Latest updates from your workspace</p>
+                      <h2>Recent workspace items</h2>
+                      <p>Latest drafts and campaigns created</p>
                     </div>
                     <button className="more-button" aria-label="More activity">
                       <MoreDots />
                     </button>
                   </div>
-                  {activities.map(([title, detail, time, tone]) => (
-                    <div className="activity-item" key={title}>
-                      <span className={`activity-dot ${tone}`}>
-                        <FileText size={14} />
-                      </span>
-                      <div>
-                        <b>{title}</b>
-                        <p>{detail}</p>
+
+                  {activities.length > 0 ? (
+                    activities.map((item) => (
+                      <div className="activity-item" key={item.id}>
+                        <span className={`activity-dot ${item.tone}`}>
+                          <FileText size={14} />
+                        </span>
+                        <div>
+                          <b>{item.title}</b>
+                          <p>{item.detail}</p>
+                        </div>
+                        <time>{item.time}</time>
                       </div>
-                      <time>{time}</time>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "40px 10px", color: "#8a9899" }}>
+                      <p style={{ fontSize: 12, margin: 0 }}>No items created yet in this workspace.</p>
+                      <small style={{ display: "block", marginTop: 4 }}>
+                        Create a campaign or draft content to see live updates.
+                      </small>
                     </div>
-                  ))}
+                  )}
+
                   <Link href="/campaigns" className="view-all">
                     View all campaigns <ArrowUpRight size={15} />
                   </Link>
@@ -263,7 +355,7 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
                     </span>
                     <span>
                       <b>Generate with AI Studio</b>
-                      <small>Turn a brief into platform-ready copy</small>
+                      <small>Turn a custom brief into platform-ready copy</small>
                     </span>
                     <ArrowUpRight size={17} />
                   </Link>
@@ -273,7 +365,7 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
                     </span>
                     <span>
                       <b>Upload media</b>
-                      <small>Add images or video to your library</small>
+                      <small>Add images or video to your private library</small>
                     </span>
                     <ArrowUpRight size={17} />
                   </Link>
@@ -283,7 +375,7 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
                     </span>
                     <span>
                       <b>Connect a channel</b>
-                      <small>Link Pinterest, Medium, or Instagram</small>
+                      <small>Link Pinterest, Medium, Imgbox, or IG</small>
                     </span>
                     <ArrowUpRight size={17} />
                   </Link>
@@ -295,8 +387,8 @@ export default function AutomationHub({ active = "Dashboard" }: { active?: strin
               <span className="empty-icon">
                 <Sparkles size={22} />
               </span>
-              <h2>Build your {active.toLowerCase()} workflow</h2>
-              <p>This workspace is connected to the shared Automation Hub architecture. Add your first item to get started.</p>
+              <h2>{active} Workspace</h2>
+              <p>This section is connected to the shared Automation Hub architecture. Create your first item to begin.</p>
               <Link href="/campaigns/new" className="primary-button">
                 <Plus size={17} />
                 Create new

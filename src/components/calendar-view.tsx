@@ -1,25 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Clock, Plus, Target, CheckCircle2, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Plus, Calendar as CalendarIcon, CheckCircle2 } from "lucide-react";
 
 interface ScheduledEvent {
   id: string;
   day: number;
+  month: number;
+  year: number;
   title: string;
-  platform: "Pinterest" | "Medium" | "Imgbox" | "Instagram";
+  platform: string;
   time: string;
-  status: "SCHEDULED" | "PUBLISHED";
+  status: string;
 }
-
-const scheduledEvents: ScheduledEvent[] = [
-  { id: "e1", day: 27, title: "Automation Hub Launch", platform: "Medium", time: "10:00 AM", status: "PUBLISHED" },
-  { id: "e2", day: 28, title: "Modern Design Assets #12", platform: "Pinterest", time: "01:30 PM", status: "SCHEDULED" },
-  { id: "e3", day: 28, title: "Infographic High-Res", platform: "Imgbox", time: "04:00 PM", status: "SCHEDULED" },
-  { id: "e4", day: 29, title: "Developer Tools Feature", platform: "Medium", time: "11:00 AM", status: "SCHEDULED" },
-  { id: "e5", day: 31, title: "Product Teaser Clip", platform: "Pinterest", time: "09:00 AM", status: "SCHEDULED" },
-];
 
 const platformColors: Record<string, { bg: string; text: string }> = {
   Pinterest: { bg: "#fff0eb", text: "#df6c47" },
@@ -29,21 +23,62 @@ const platformColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function CalendarView() {
-  const [selectedDay, setSelectedDay] = useState<number>(28);
+  const currentDate = new Date();
+  const [selectedDay, setSelectedDay] = useState<number>(currentDate.getDate());
+  const [events, setEvents] = useState<ScheduledEvent[]>([]);
 
-  const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
-  const startDayOffset = 5; // August 2026 starts on Saturday (5 padding days)
+  useEffect(() => {
+    async function loadScheduled() {
+      try {
+        const response = await fetch("/api/campaigns");
+        if (response.ok) {
+          const data = await response.json();
+          const items: ScheduledEvent[] = [];
 
-  const selectedEvents = scheduledEvents.filter((e) => e.day === selectedDay);
+          for (const camp of data.campaigns ?? []) {
+            if (camp.scheduled_at) {
+              const d = new Date(camp.scheduled_at);
+              const targets = camp.campaign_targets ?? [];
+              for (const target of targets) {
+                const platformName = target.connected_accounts?.platforms?.name || "Platform";
+                items.push({
+                  id: target.id || camp.id,
+                  day: d.getDate(),
+                  month: d.getMonth(),
+                  year: d.getFullYear(),
+                  title: camp.name,
+                  platform: platformName,
+                  time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  status: target.status || camp.status || "scheduled",
+                });
+              }
+            }
+          }
+          setEvents(items);
+        }
+      } catch {
+        // Silently continue
+      }
+    }
+    loadScheduled();
+  }, []);
+
+  const monthName = currentDate.toLocaleString("default", { month: "long" });
+  const currentYear = currentDate.getFullYear();
+  const daysInMonth = new Date(currentYear, currentDate.getMonth() + 1, 0).getDate();
+  const firstDayOfWeek = new Date(currentYear, currentDate.getMonth(), 1).getDay(); // 0 is Sunday
+  const startDayOffset = (firstDayOfWeek + 6) % 7; // Convert to Monday start
+
+  const selectedEvents = events.filter((e) => e.day === selectedDay);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(280px, 340px)", gap: 20 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
       {/* Calendar Grid */}
       <div className="panel" style={{ padding: 22 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>August 2026</h2>
-            <span style={{ fontSize: 12, color: "#8a9899" }}>5 scheduled publications</span>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{monthName} {currentYear}</h2>
+            <span style={{ fontSize: 12, color: "#8a9899" }}>{events.length} scheduled publications</span>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button className="icon-button" style={{ border: "1px solid var(--line)", borderRadius: 6 }} aria-label="Previous month">
@@ -63,20 +98,20 @@ export default function CalendarView() {
         {/* Calendar Days */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
           {Array.from({ length: startDayOffset }).map((_, i) => (
-            <div key={`offset-${i}`} style={{ minHeight: 70, background: "#fafbfb", borderRadius: 8, border: "1px dashed #f0f2f2" }} />
+            <div key={`offset-${i}`} style={{ minHeight: 65, background: "#fafbfb", borderRadius: 8, border: "1px dashed #f0f2f2" }} />
           ))}
 
-          {daysInMonth.map((day) => {
-            const dayEvents = scheduledEvents.filter((e) => e.day === day);
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+            const dayEvents = events.filter((e) => e.day === day);
             const isSelected = selectedDay === day;
-            const isToday = day === 27;
+            const isToday = day === currentDate.getDate();
 
             return (
               <div
                 key={day}
                 onClick={() => setSelectedDay(day)}
                 style={{
-                  minHeight: 70,
+                  minHeight: 65,
                   padding: "8px 6px",
                   borderRadius: 8,
                   border: isSelected ? "2px solid #1ba797" : isToday ? "1px solid #78c9be" : "1px solid var(--line)",
@@ -130,7 +165,7 @@ export default function CalendarView() {
       <div className="panel" style={{ padding: 22 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
-            Agenda for Aug {selectedDay}, 2026
+            Agenda for {monthName} {selectedDay}, {currentYear}
           </h3>
           <Link
             href="/campaigns/new"
@@ -171,23 +206,23 @@ export default function CalendarView() {
                   </span>
                 </div>
                 <h4 style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600 }}>{ev.title}</h4>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: ev.status === "PUBLISHED" ? "#1a8f82" : "#a16e3c" }}>
-                  {ev.status === "PUBLISHED" ? <CheckCircle2 size={13} /> : <Clock size={13} />}
-                  <span>{ev.status === "PUBLISHED" ? "Published successfully" : "Queued for automated publishing"}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: ev.status === "published" ? "#1a8f82" : "#a16e3c" }}>
+                  {ev.status === "published" ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                  <span>{ev.status === "published" ? "Published" : "Scheduled publication"}</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: "center", padding: "40px 10px", color: "#8a9899" }}>
+          <div style={{ textAlign: "center", padding: "50px 10px", color: "#8a9899" }}>
             <CalendarIcon size={28} style={{ margin: "0 auto 10px", opacity: 0.5 }} />
-            <p style={{ margin: 0, fontSize: 12 }}>No publications scheduled for August {selectedDay}.</p>
+            <p style={{ margin: 0, fontSize: 12 }}>No publications scheduled for this day.</p>
             <Link
               href="/campaigns/new"
               className="primary-button"
               style={{ margin: "16px auto 0", display: "inline-flex" }}
             >
-              <Plus size={15} /> Add Campaign
+              <Plus size={15} /> Schedule campaign
             </Link>
           </div>
         )}
