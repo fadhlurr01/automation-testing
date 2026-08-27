@@ -1,3 +1,5 @@
+import { InstagramOAuthProvider } from "@/platforms/instagram/oauth";
+
 export type OAuthAccount = { accountId: string; accountName: string; username?: string; avatarUrl?: string };
 
 export interface OAuthProvider {
@@ -9,6 +11,5 @@ export interface OAuthProvider {
 }
 
 export function getOAuthProvider(platform: string): OAuthProvider | null {
-  void platform;
-  return null;
+  return platform === "instagram" ? new InstagramOAuthProvider() : null;
 }

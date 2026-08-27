@@ -1,8 +1,8 @@
 import type { PlatformAdapter } from "@/lib/publishing/types";
+import { InstagramAdapter } from "@/platforms/instagram/adapter";
 
 export function getPlatformAdapter(platformSlug: string): PlatformAdapter | null {
-  void platformSlug;
-  return null;
+  return platformSlug === "instagram" ? new InstagramAdapter() : null;
 }
 
 export class MockPlatformAdapter implements PlatformAdapter {
