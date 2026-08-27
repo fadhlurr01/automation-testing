@@ -18,7 +18,10 @@ import {
   Check,
   AlertCircle,
   HelpCircle,
+  ExternalLink as OpenIcon,
 } from "lucide-react";
+import ManualAssistModal from "@/components/manual-assist-modal";
+import { PreparedManualContent } from "@/lib/manual-assist/types";
 
 type PlatformReadiness = "READY" | "WARNING" | "BLOCKED" | "MANUAL_ASSIST";
 
@@ -38,6 +41,26 @@ interface PlatformTarget {
 }
 
 const defaultTargets: PlatformTarget[] = [
+  {
+    slug: "instagram",
+    name: "Instagram",
+    category: "Social Media",
+    readiness: "READY",
+    statusText: "Meta Graph API v25.0 ready",
+    variantTitle: "Spring Highlights",
+    variantBody: "Swipe up to discover the newest trends and automation releases! ✨ #automation #spring",
+    mediaRequired: true,
+  },
+  {
+    slug: "facebook",
+    name: "Facebook",
+    category: "Social Media",
+    readiness: "READY",
+    statusText: "Graph API Pages publishing ready",
+    variantTitle: "Spring Launch Collection 2026",
+    variantBody: "We are thrilled to announce our latest release with enhanced workflow distribution.",
+    mediaRequired: true,
+  },
   {
     slug: "pinterest",
     name: "Pinterest",
@@ -59,26 +82,6 @@ const defaultTargets: PlatformTarget[] = [
     mediaRequired: false,
   },
   {
-    slug: "imgbox",
-    name: "Imgbox",
-    category: "Image Hosting",
-    readiness: "READY",
-    statusText: "Direct hosting adapter ready",
-    variantTitle: "High-Res Poster Asset",
-    variantBody: "Full resolution image hosting asset.",
-    mediaRequired: true,
-  },
-  {
-    slug: "instagram",
-    name: "Instagram",
-    category: "Social Media",
-    readiness: "READY",
-    statusText: "Meta Graph API v25.0 ready",
-    variantTitle: "Spring Highlights",
-    variantBody: "Swipe up to discover the newest trends and automation releases! ✨ #automation #spring",
-    mediaRequired: true,
-  },
-  {
     slug: "blogger",
     name: "Blogger",
     category: "Blog & Publishing",
@@ -93,9 +96,9 @@ const defaultTargets: PlatformTarget[] = [
     name: "Imgur",
     category: "Image Hosting",
     readiness: "MANUAL_ASSIST",
-    statusText: "OAuth direct publishing requires manual asset confirmation",
+    statusText: "Manual Assist ready · Content prepared for copy & manual submit",
     variantTitle: "Community Visual Showcase",
-    variantBody: "Curated imagery for public discovery.",
+    variantBody: "Curated high-res imagery for public discovery.",
     mediaRequired: true,
   },
   {
@@ -131,9 +134,10 @@ export default function PublishCenter() {
   const [campaignName, setCampaignName] = useState("Spring Launch Campaign 2026");
   const [mediaUrl, setMediaUrl] = useState("https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200");
   const [targets, setTargets] = useState<PlatformTarget[]>(defaultTargets);
-  const [selectedVariantTab, setSelectedVariantTab] = useState("pinterest");
+  const [selectedVariantTab, setSelectedVariantTab] = useState("instagram");
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [manualAssistTarget, setManualAssistTarget] = useState<PlatformTarget | null>(null);
 
   // Stats calculation
   const totalCount = targets.length;
@@ -145,28 +149,31 @@ export default function PublishCenter() {
     setIsPublishing(true);
     setHasStarted(true);
 
-    // 1. Mark ready targets as queued
+    // 1. Mark ready targets as queued and manual assist targets as manual_assist
     setTargets((prev) =>
       prev.map((t) => ({
         ...t,
-        publishState: t.readiness === "BLOCKED" ? "failed" : t.readiness === "MANUAL_ASSIST" ? "manual_assist" : "queued",
-        errorReason: t.readiness === "BLOCKED" ? "Blocked by configuration policy" : undefined,
+        publishState:
+          t.readiness === "BLOCKED"
+            ? "failed"
+            : t.readiness === "MANUAL_ASSIST"
+            ? "manual_assist"
+            : "queued",
+        errorReason: t.readiness === "BLOCKED" ? "Blocked by platform security policy" : undefined,
       }))
     );
 
-    // 2. Start worker simulation & live adapter calls sequentially/concurrently
+    // 2. Start worker execution per platform
     for (let i = 0; i < targets.length; i++) {
       const target = targets[i];
 
       if (target.readiness === "BLOCKED") continue;
-      if (target.readiness === "MANUAL_ASSIST") continue;
+      if (target.readiness === "MANUAL_ASSIST") continue; // Handled via Manual Assist modal
 
-      // Update current target to publishing
       setTargets((prev) =>
         prev.map((t, idx) => (idx === i ? { ...t, publishState: "publishing" } : t))
       );
 
-      // Call publishing test API or real adapter
       try {
         const response = await fetch("/api/publishing/test", {
           method: "POST",
@@ -180,9 +187,7 @@ export default function PublishCenter() {
         });
 
         const result = await response.json();
-
-        // Delay slightly for realistic UI worker animation
-        await new Promise((r) => setTimeout(r, 700));
+        await new Promise((r) => setTimeout(r, 650));
 
         if (response.ok && result.ok && result.result?.confirmed) {
           setTargets((prev) =>
@@ -204,7 +209,7 @@ export default function PublishCenter() {
                 ? {
                     ...t,
                     publishState: "failed",
-                    errorReason: result.error || "Adapter rejected publication container.",
+                    errorReason: result.error || "Platform rejected publication payload.",
                   }
                 : t
             )
@@ -217,7 +222,7 @@ export default function PublishCenter() {
               ? {
                   ...t,
                   publishState: "failed",
-                  errorReason: err instanceof Error ? err.message : "Network error during worker execution",
+                  errorReason: err instanceof Error ? err.message : "Network error",
                 }
               : t
             )
@@ -282,10 +287,51 @@ export default function PublishCenter() {
     }
   }
 
+  function getPreparedContent(target: PlatformTarget): PreparedManualContent {
+    return {
+      image: mediaUrl,
+      title: target.variantTitle,
+      description: target.variantBody,
+      caption: `${target.variantTitle}\n\n${target.variantBody}\n\n#automation #growth #content`,
+      keywords: ["automation", "content", "multiplatform", "publishing"],
+      hashtags: ["#automation", "#content", "#publishing", "#growth"],
+      cta: "Explore the full release at https://automation-testing-theta.vercel.app/",
+      destinationUrl: "https://automation-testing-theta.vercel.app/",
+    };
+  }
+
+  function handleManualStatusUpdate(targetSlug: string, status: string, url?: string) {
+    if (status === "USER_CONFIRMED") {
+      setTargets((prev) =>
+        prev.map((t) =>
+          t.slug === targetSlug
+            ? {
+                ...t,
+                publishState: "published",
+                externalPostId: `manual_confirmed_${Date.now()}`,
+                externalUrl: url || `https://${targetSlug}.com/manual-post`,
+              }
+            : t
+        )
+      );
+    }
+  }
+
   const activeVariant = targets.find((t) => t.slug === selectedVariantTab) || targets[0];
 
   return (
     <div style={{ display: "grid", gap: 24 }}>
+      {/* Manual Assist Modal */}
+      {manualAssistTarget && (
+        <ManualAssistModal
+          platformName={manualAssistTarget.name}
+          platformSlug={manualAssistTarget.slug}
+          prepared={getPreparedContent(manualAssistTarget)}
+          onClose={() => setManualAssistTarget(null)}
+          onStatusChange={(status, url) => handleManualStatusUpdate(manualAssistTarget.slug, status, url)}
+        />
+      )}
+
       {/* Campaign Summary & Actions Header */}
       <section
         className="panel"
@@ -309,7 +355,7 @@ export default function PublishCenter() {
             {campaignName}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: "#697b7c" }}>
-            Automated multi-channel publishing engine with post verification.
+            Automated publishing with post verification and Manual Assist for non-API targets.
           </p>
         </div>
 
@@ -330,7 +376,7 @@ export default function PublishCenter() {
         </button>
       </section>
 
-      {/* Real-time Publishing Progress (when active) */}
+      {/* Real-time Publishing Progress */}
       {hasStarted && (
         <section
           className="panel"
@@ -353,7 +399,7 @@ export default function PublishCenter() {
             <strong style={{ fontSize: 20, color: "#168f83" }}>{progressPercent}%</strong>
           </div>
 
-          {/* ASCII & Graphical Progress Bar */}
+          {/* Graphical Progress Bar */}
           <div
             style={{
               height: 10,
@@ -388,13 +434,15 @@ export default function PublishCenter() {
                   style={{
                     padding: 14,
                     borderRadius: 8,
-                    background: isDone ? "#f2faf8" : isFail ? "#fff5f5" : isRunning ? "#f0f8ff" : "#fff",
+                    background: isDone ? "#f2faf8" : isFail ? "#fff5f5" : isRunning ? "#f0f8ff" : isManual ? "#f0f5ff" : "#fff",
                     border: isDone
                       ? "1px solid #c2e8e0"
                       : isFail
                       ? "1px solid #fcc"
                       : isRunning
                       ? "1px solid #91caff"
+                      : isManual
+                      ? "1px solid #d6e4ff"
                       : "1px solid var(--line)",
                     display: "flex",
                     flexDirection: "column",
@@ -424,6 +472,8 @@ export default function PublishCenter() {
                           ? "#fff1f0"
                           : isRunning
                           ? "#e6f4ff"
+                          : isManual
+                          ? "#d6e4ff"
                           : "#f0f0f0",
                         color: isDone
                           ? "#159c8e"
@@ -431,6 +481,8 @@ export default function PublishCenter() {
                           ? "#cf1322"
                           : isRunning
                           ? "#1677ff"
+                          : isManual
+                          ? "#2f54eb"
                           : "#697b7c",
                       }}
                     >
@@ -467,6 +519,32 @@ export default function PublishCenter() {
                           View External Post <ExternalLink size={11} />
                         </a>
                       )}
+                    </div>
+                  )}
+
+                  {/* Details for Manual Assist Target */}
+                  {isManual && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                      <span style={{ fontSize: 11, color: "#2f54eb" }}>
+                        Content prepared for manual submission.
+                      </span>
+                      <button
+                        onClick={() => setManualAssistTarget(t)}
+                        className="text-button"
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#2f54eb",
+                          border: "1px solid #2f54eb",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <OpenIcon size={12} /> Open Assist
+                      </button>
                     </div>
                   )}
 
@@ -566,9 +644,29 @@ export default function PublishCenter() {
               </span>
             </div>
             <h4 style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 600 }}>{activeVariant.variantTitle}</h4>
-            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: "var(--ink)" }}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, color: "var(--ink)" }}>
               {activeVariant.variantBody}
             </p>
+
+            {activeVariant.readiness === "MANUAL_ASSIST" && (
+              <button
+                onClick={() => setManualAssistTarget(activeVariant)}
+                className="text-button"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#2f54eb",
+                  border: "1px solid #2f54eb",
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <OpenIcon size={13} /> Open Manual Assist for {activeVariant.name}
+              </button>
+            )}
           </div>
         </section>
 
@@ -590,6 +688,11 @@ export default function PublishCenter() {
               return (
                 <div
                   key={t.slug}
+                  onClick={() => {
+                    if (t.readiness === "MANUAL_ASSIST") {
+                      setManualAssistTarget(t);
+                    }
+                  }}
                   style={{
                     padding: "12px 14px",
                     borderRadius: 8,
@@ -599,6 +702,8 @@ export default function PublishCenter() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 12,
+                    cursor: t.readiness === "MANUAL_ASSIST" ? "pointer" : "default",
+                    transition: "border 0.2s, background 0.2s",
                   }}
                 >
                   <div>
