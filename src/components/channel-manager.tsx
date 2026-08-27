@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Check,
   CircleAlert,
   CheckCircle2,
   Loader2,
-  Link2,
   Search,
   Unplug,
   Wifi,
@@ -18,9 +16,9 @@ import {
   Sparkles,
   HelpCircle,
   BookOpen,
-  Info,
   ChevronDown,
   ChevronUp,
+  Share2,
 } from "lucide-react";
 import ManualAssistModal from "@/components/manual-assist-modal";
 import { PreparedManualContent } from "@/lib/manual-assist/types";
@@ -29,23 +27,27 @@ type Channel = {
   name: string;
   slug: string;
   category: string;
+  color: string;
   api: boolean;
   oauth: boolean;
   publish: boolean;
   upload: boolean;
+  supportsVideo: boolean;
+  supportsArticle: boolean;
   status: string;
   connectedAccountId?: string;
   username?: string;
-  portalUrl?: string;
+  portalUrl: string;
 };
 
-const groups = ["social", "blog_publishing", "image_hosting", "portfolio", "stock_visuals", "other"];
+const groups = ["all", "social", "blog_publishing", "image_hosting", "portfolio", "stock_visuals", "other"];
 const labels: Record<string, string> = {
+  all: "Semua Platform (37)",
   social: "Social Media (7)",
-  blog_publishing: "Blog & Publishing (7)",
-  image_hosting: "Image & Media Hosting (14)",
+  blog_publishing: "Blog & Editorial (7)",
+  image_hosting: "Image & Hosting (14)",
   portfolio: "Portfolio & Creative (3)",
-  stock_visuals: "Stock Visual Platforms (3)",
+  stock_visuals: "Stock Visual (3)",
   other: "Community & Directory (3)",
 };
 
@@ -101,7 +103,7 @@ export const platformGuides: Record<
     portalName: "Meta Graph API Explorer",
     portalUrl: "https://developers.facebook.com/tools/explorer",
     steps: [
-      "Buka Meta Graph API Explorer",
+      "Buka Meta Graph API Explorer: developers.facebook.com/tools/explorer",
       "Pilih Halaman Bisnis (Facebook Page) Anda",
       "Generate Page Access Token dengan izin: pages_show_list, pages_read_engagement, pages_manage_posts",
     ],
@@ -134,71 +136,80 @@ const defaultNoApiGuide = {
   note: "Mode Manual Assist 100% aman, tidak melanggar aturan platform, dan tidak memerlukan biaya langganan API tambahan.",
 };
 
-// 37 Verified User Platforms
-const verifiedPlatformDefinitions: Array<{ name: string; slug: string; category: string; portalUrl: string }> = [
+// 37 Verified User Platforms with Distinct Brand Colors
+const verifiedPlatformDefinitions: Array<{
+  name: string;
+  slug: string;
+  category: string;
+  color: string;
+  portalUrl: string;
+  api?: boolean;
+  oauth?: boolean;
+  supportsVideo?: boolean;
+  supportsArticle?: boolean;
+}> = [
   // Social Media
-  { name: "Pinterest", slug: "pinterest", category: "social", portalUrl: "https://www.pinterest.com/" },
-  { name: "Instagram", slug: "instagram", category: "social", portalUrl: "https://www.instagram.com/" },
-  { name: "Facebook", slug: "facebook", category: "social", portalUrl: "https://www.facebook.com/" },
-  { name: "X/Twitter", slug: "twitter", category: "social", portalUrl: "https://x.com/" },
-  { name: "Minds", slug: "minds", category: "social", portalUrl: "https://www.minds.com/" },
-  { name: "Flipboard", slug: "flipboard", category: "social", portalUrl: "https://flipboard.com/" },
-  { name: "Tripadvisor", slug: "tripadvisor", category: "social", portalUrl: "https://www.tripadvisor.co.id/" },
+  { name: "Pinterest", slug: "pinterest", category: "social", color: "#E60023", portalUrl: "https://www.pinterest.com/", api: true, oauth: true, supportsVideo: true },
+  { name: "Instagram", slug: "instagram", category: "social", color: "#E1306C", portalUrl: "https://www.instagram.com/", api: true, oauth: true, supportsVideo: true },
+  { name: "Facebook", slug: "facebook", category: "social", color: "#1877F2", portalUrl: "https://www.facebook.com/", api: true, oauth: true, supportsVideo: true },
+  { name: "X / Twitter", slug: "twitter", category: "social", color: "#0f1419", portalUrl: "https://x.com/", supportsVideo: true },
+  { name: "Minds", slug: "minds", category: "social", color: "#EBB300", portalUrl: "https://www.minds.com/", supportsVideo: true },
+  { name: "Flipboard", slug: "flipboard", category: "social", color: "#E12828", portalUrl: "https://flipboard.com/", supportsArticle: true },
+  { name: "Tripadvisor", slug: "tripadvisor", category: "social", color: "#00AA6C", portalUrl: "https://www.tripadvisor.co.id/" },
 
   // Blog & Publishing
-  { name: "Medium", slug: "medium", category: "blog_publishing", portalUrl: "https://medium.com/" },
-  { name: "Wattpad", slug: "wattpad", category: "blog_publishing", portalUrl: "https://www.wattpad.com/" },
-  { name: "Wix", slug: "wix", category: "blog_publishing", portalUrl: "https://id.wix.com/" },
-  { name: "Penzu", slug: "penzu", category: "blog_publishing", portalUrl: "https://penzu.com/" },
-  { name: "Weebly", slug: "weebly", category: "blog_publishing", portalUrl: "https://www.weebly.com/" },
-  { name: "LiveJournal", slug: "livejournal", category: "blog_publishing", portalUrl: "https://livejournal.com/" },
-  { name: "FlipHTML5", slug: "fliphtml5", category: "blog_publishing", portalUrl: "https://fliphtml5.com/" },
+  { name: "Medium", slug: "medium", category: "blog_publishing", color: "#000000", portalUrl: "https://medium.com/", api: true, oauth: true, supportsArticle: true },
+  { name: "Wattpad", slug: "wattpad", category: "blog_publishing", color: "#FF6122", portalUrl: "https://www.wattpad.com/", supportsArticle: true },
+  { name: "Wix", slug: "wix", category: "blog_publishing", color: "#0C6EFC", portalUrl: "https://id.wix.com/", supportsArticle: true },
+  { name: "Penzu", slug: "penzu", category: "blog_publishing", color: "#0099FF", portalUrl: "https://penzu.com/", supportsArticle: true },
+  { name: "Weebly", slug: "weebly", category: "blog_publishing", color: "#2990EA", portalUrl: "https://www.weebly.com/", supportsArticle: true },
+  { name: "LiveJournal", slug: "livejournal", category: "blog_publishing", color: "#004359", portalUrl: "https://livejournal.com/", supportsArticle: true },
+  { name: "FlipHTML5", slug: "fliphtml5", category: "blog_publishing", color: "#2B82EC", portalUrl: "https://fliphtml5.com/", supportsArticle: true },
 
   // Image & Media Hosting
-  { name: "ImgBB", slug: "imgbb", category: "image_hosting", portalUrl: "https://imgbb.com/" },
-  { name: "Postimages", slug: "postimages", category: "image_hosting", portalUrl: "https://postimages.org/" },
-  { name: "Publitio", slug: "publitio", category: "image_hosting", portalUrl: "https://publit.io/" },
-  { name: "Prnt.sc", slug: "prntscr", category: "image_hosting", portalUrl: "https://prnt.sc/" },
-  { name: "FreeImage.host", slug: "freeimage-host", category: "image_hosting", portalUrl: "https://freeimage.host/" },
-  { name: "ImageShack", slug: "imageshack", category: "image_hosting", portalUrl: "https://imageshack.com/" },
-  { name: "MediaFire", slug: "mediafire", category: "image_hosting", portalUrl: "https://mediafire.com/" },
-  { name: "4shared", slug: "4shared", category: "image_hosting", portalUrl: "https://4shared.com/" },
-  { name: "ImageBam", slug: "imagebam", category: "image_hosting", portalUrl: "https://imagebam.com/" },
-  { name: "Shutterfly", slug: "shutterfly", category: "image_hosting", portalUrl: "https://shutterfly.com/" },
-  { name: "TinyPic.host", slug: "tinypic", category: "image_hosting", portalUrl: "https://tinypic.host/" },
-  { name: "Gifyu", slug: "gifyu", category: "image_hosting", portalUrl: "https://gifyu.com/" },
-  { name: "Imgur", slug: "imgur", category: "image_hosting", portalUrl: "https://imgur.com/" },
-  { name: "Google Photos", slug: "googlephotos", category: "image_hosting", portalUrl: "https://photos.google.com/" },
+  { name: "ImgBB", slug: "imgbb", category: "image_hosting", color: "#206095", portalUrl: "https://imgbb.com/", api: true },
+  { name: "Postimages", slug: "postimages", category: "image_hosting", color: "#2B8A3E", portalUrl: "https://postimages.org/" },
+  { name: "Publitio", slug: "publitio", category: "image_hosting", color: "#FF6B00", portalUrl: "https://publit.io/", supportsVideo: true },
+  { name: "Prnt.sc", slug: "prntscr", category: "image_hosting", color: "#18A0FB", portalUrl: "https://prnt.sc/" },
+  { name: "FreeImage.host", slug: "freeimage-host", category: "image_hosting", color: "#4A90E2", portalUrl: "https://freeimage.host/" },
+  { name: "ImageShack", slug: "imageshack", category: "image_hosting", color: "#FF7700", portalUrl: "https://imageshack.com/", supportsVideo: true },
+  { name: "MediaFire", slug: "mediafire", category: "image_hosting", color: "#1299F3", portalUrl: "https://mediafire.com/", supportsVideo: true },
+  { name: "4shared", slug: "4shared", category: "image_hosting", color: "#0082CA", portalUrl: "https://4shared.com/", supportsVideo: true },
+  { name: "ImageBam", slug: "imagebam", category: "image_hosting", color: "#6C5CE7", portalUrl: "https://imagebam.com/" },
+  { name: "Shutterfly", slug: "shutterfly", category: "image_hosting", color: "#FF5722", portalUrl: "https://shutterfly.com/" },
+  { name: "TinyPic.host", slug: "tinypic", category: "image_hosting", color: "#00B894", portalUrl: "https://tinypic.host/" },
+  { name: "Gifyu", slug: "gifyu", category: "image_hosting", color: "#E84393", portalUrl: "https://gifyu.com/" },
+  { name: "Imgur", slug: "imgur", category: "image_hosting", color: "#1BB76E", portalUrl: "https://imgur.com/", supportsVideo: true },
+  { name: "Google Photos", slug: "googlephotos", category: "image_hosting", color: "#4285F4", portalUrl: "https://photos.google.com/", supportsVideo: true },
 
   // Portfolio, Curation & Discovery
-  { name: "Behance", slug: "behance", category: "portfolio", portalUrl: "https://behance.net/" },
-  { name: "500px", slug: "500px", category: "portfolio", portalUrl: "https://500px.com/" },
-  { name: "Dropmark", slug: "dropmark", category: "portfolio", portalUrl: "https://dropmark.com/" },
+  { name: "Behance", slug: "behance", category: "portfolio", color: "#1769FF", portalUrl: "https://behance.net/", supportsArticle: true },
+  { name: "500px", slug: "500px", category: "portfolio", color: "#000000", portalUrl: "https://500px.com/" },
+  { name: "Dropmark", slug: "dropmark", category: "portfolio", color: "#3D5AFE", portalUrl: "https://dropmark.com/", supportsArticle: true },
 
   // Community, Directory & Experiences
-  { name: "Locanto", slug: "locanto", category: "other", portalUrl: "https://locanto.co.id/" },
-  { name: "Klook", slug: "klook", category: "other", portalUrl: "https://www.klook.com/" },
-  { name: "Glints", slug: "glints", category: "other", portalUrl: "https://glints.com/" },
+  { name: "Locanto", slug: "locanto", category: "other", color: "#E64A19", portalUrl: "https://locanto.co.id/" },
+  { name: "Klook", slug: "klook", category: "other", color: "#FF5B00", portalUrl: "https://www.klook.com/" },
+  { name: "Glints", slug: "glints", category: "other", color: "#ED1C24", portalUrl: "https://glints.com/" },
 
   // Stock Visual & Asset Platforms
-  { name: "Pixabay", slug: "pixabay", category: "stock_visuals", portalUrl: "https://pixabay.com/" },
-  { name: "Unsplash", slug: "unsplash", category: "stock_visuals", portalUrl: "https://unsplash.com/" },
-  { name: "Pexels", slug: "pexels", category: "stock_visuals", portalUrl: "https://www.pexels.com/id-id/" },
+  { name: "Pixabay", slug: "pixabay", category: "stock_visuals", color: "#00AB6B", portalUrl: "https://pixabay.com/" },
+  { name: "Unsplash", slug: "unsplash", category: "stock_visuals", color: "#111111", portalUrl: "https://unsplash.com/" },
+  { name: "Pexels", slug: "pexels", category: "stock_visuals", color: "#05A081", portalUrl: "https://www.pexels.com/id-id/" },
 ];
-
-const apiPlatforms = new Set(["Instagram", "Pinterest", "Medium", "Facebook", "ImgBB"]);
-const oauthPlatforms = new Set(["Instagram", "Pinterest", "Medium", "Facebook"]);
-const publishPlatforms = new Set(["Instagram", "Pinterest", "Medium", "Facebook", "ImgBB"]);
 
 const initialChannels: Channel[] = verifiedPlatformDefinitions.map((p) => ({
   name: p.name,
   slug: p.slug,
   category: p.category,
+  color: p.color,
   portalUrl: p.portalUrl,
-  api: apiPlatforms.has(p.name),
-  oauth: oauthPlatforms.has(p.name),
-  publish: publishPlatforms.has(p.name),
+  api: !!p.api,
+  oauth: !!p.oauth,
+  publish: true,
   upload: true,
+  supportsVideo: !!p.supportsVideo,
+  supportsArticle: !!p.supportsArticle,
   status: "not_connected",
 }));
 
@@ -251,7 +262,7 @@ export default function ChannelManager() {
         );
       }
     } catch {
-      // Silently continue
+      // Continue silently
     }
   }
 
@@ -264,7 +275,7 @@ export default function ChannelManager() {
       channelList.filter(
         (channel) =>
           (filter === "all" || channel.category === filter) &&
-          channel.name.toLowerCase().includes(search.toLowerCase())
+          channel.name.toLowerCase().includes(search.toLowerCase().trim())
       ),
     [channelList, filter, search]
   );
@@ -427,29 +438,56 @@ export default function ChannelManager() {
             <div
               style={{
                 background: "#fff",
-                borderRadius: 12,
+                borderRadius: 16,
                 maxWidth: 540,
                 width: "100%",
                 maxHeight: "90vh",
                 overflowY: "auto",
                 padding: 24,
-                boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
                 display: "grid",
                 gap: 16,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Key size={20} color="#159c8e" />
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
-                    Hubungkan {activeModalChannel.name}
-                  </h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: activeModalChannel.color,
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      fontSize: 16,
+                    }}
+                  >
+                    {activeModalChannel.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>
+                      Hubungkan {activeModalChannel.name}
+                    </h3>
+                    <span style={{ fontSize: 11, color: "#64748b" }}>
+                      {labels[activeModalChannel.category] || activeModalChannel.category}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => setActiveModalChannel(null)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#8a9899" }}
+                  style={{
+                    background: "#f1f5f9",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: 6,
+                    cursor: "pointer",
+                    color: "#64748b",
+                  }}
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
 
@@ -458,7 +496,7 @@ export default function ChannelManager() {
                 style={{
                   background: guide.requiresApi ? "#f0f9ff" : "#f6fdfb",
                   border: guide.requiresApi ? "1px solid #bae6fd" : "1px solid #bbf7d0",
-                  borderRadius: 8,
+                  borderRadius: 10,
                   padding: "12px 14px",
                 }}
               >
@@ -475,16 +513,16 @@ export default function ChannelManager() {
                   }}
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <BookOpen size={14} />
+                    <BookOpen size={15} />
                     {guide.requiresApi
                       ? "📖 Panduan Langkah Mendapatkan Token / API Key"
-                      : "ℹ️ Informasi Koneksi: Tidak Memerlukan API Key"}
+                      : "ℹ️ Informasi: Tidak Memerlukan Kunci API"}
                   </span>
-                  {showGuideInModal ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  {showGuideInModal ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 </div>
 
                 {showGuideInModal && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: "#334155", display: "grid", gap: 6 }}>
+                  <div style={{ marginTop: 10, fontSize: 12, color: "#334155", display: "grid", gap: 8 }}>
                     <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5 }}>
                       {guide.steps.map((st, idx) => (
                         <li key={idx} style={{ marginBottom: 4 }}>
@@ -494,7 +532,7 @@ export default function ChannelManager() {
                     </ol>
 
                     {guide.portalUrl && (
-                      <div style={{ marginTop: 6 }}>
+                      <div style={{ marginTop: 4 }}>
                         <a
                           href={guide.portalUrl}
                           target="_blank"
@@ -513,7 +551,7 @@ export default function ChannelManager() {
                       </div>
                     )}
 
-                    <div style={{ marginTop: 4, fontStyle: "italic", color: "#64748b", fontSize: 11 }}>
+                    <div style={{ marginTop: 2, fontStyle: "italic", color: "#64748b", fontSize: 11 }}>
                       💡 {guide.note}
                     </div>
                   </div>
@@ -523,64 +561,108 @@ export default function ChannelManager() {
               {/* Form Input */}
               <form onSubmit={handleDirectConnectSubmit} style={{ display: "grid", gap: 14 }}>
                 <div>
-                  <label className="field-label">Nama Akun / Display Name</label>
+                  <label className="field-label" style={{ display: "block", marginBottom: 6, fontWeight: 700, fontSize: 12, color: "#334155" }}>
+                    Nama Akun / Display Name
+                  </label>
                   <input
-                    className="campaign-name"
                     placeholder={`Contoh: @akun_${activeModalChannel.slug}_saya`}
                     value={modalAccountName}
                     onChange={(e) => setModalAccountName(e.target.value)}
                     required
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 13,
+                      outline: "none",
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="field-label">Username (Opsional)</label>
+                  <label className="field-label" style={{ display: "block", marginBottom: 6, fontWeight: 700, fontSize: 12, color: "#334155" }}>
+                    Username (Opsional)
+                  </label>
                   <input
-                    className="campaign-name"
                     placeholder="Contoh: arbi_creator"
                     value={modalUsername}
                     onChange={(e) => setModalUsername(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 13,
+                      outline: "none",
+                    }}
                   />
                 </div>
 
                 {activeModalChannel.api ? (
                   <div>
-                    <label className="field-label">
+                    <label className="field-label" style={{ display: "block", marginBottom: 6, fontWeight: 700, fontSize: 12, color: "#334155" }}>
                       Integration Token / API Key ({activeModalChannel.name})
                     </label>
                     <input
                       type="password"
-                      className="campaign-name"
                       placeholder="Tempel Access Token atau API Key Anda di sini"
                       value={modalToken}
                       onChange={(e) => setModalToken(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 8,
+                        border: "1px solid #cbd5e1",
+                        fontSize: 13,
+                        outline: "none",
+                      }}
                     />
-                    <small style={{ color: "#8a9899", fontSize: 11, display: "block", marginTop: 4 }}>
-                      🔒 Token disimpan terenkripsi di server (AES-256-GCM) dan tidak akan pernah bocor ke frontend.
+                    <small style={{ color: "#64748b", fontSize: 11, display: "block", marginTop: 4 }}>
+                      🔒 Token disimpan terenkripsi di server (AES-256-GCM) dan aman.
                     </small>
                   </div>
                 ) : (
-                  <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "#475569" }}>
-                      ✅ <b>Platform Siap Pakai</b>: Akun ini siap didistribusikan melalui sistem <b>Manual Assist</b> tanpa perlu memasukkan kunci API.
+                  <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
+                      ✅ <b>Platform Siap Pakai</b>: Konten siap didistribusikan melalui <b>Manual Assist</b> tanpa perlu memasukkan token API.
                     </p>
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 10 }}>
                   <button
                     type="button"
                     onClick={() => setActiveModalChannel(null)}
-                    className="text-button"
-                    style={{ padding: "8px 16px", fontSize: 12 }}
+                    style={{
+                      padding: "9px 16px",
+                      fontSize: 12,
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      background: "#fff",
+                      color: "#475569",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={connecting}
-                    className="primary-button"
-                    style={{ padding: "8px 20px", fontSize: 12 }}
+                    style={{
+                      padding: "9px 20px",
+                      fontSize: 12,
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#168f83",
+                      color: "#fff",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
                   >
                     {connecting ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
                     {connecting ? "Menghubungkan..." : "Konfirmasi & Simpan Akun"}
@@ -594,138 +676,211 @@ export default function ChannelManager() {
 
       {/* Notice Banner */}
       {notice && (
-        <div className={`channel-notice ${notice.type === "success" ? "channel-notice-success" : ""}`}>
-          {notice.type === "success" ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}
+        <div
+          style={{
+            padding: "12px 16px",
+            borderRadius: 8,
+            background: notice.type === "success" ? "#ecfdf5" : "#fef2f2",
+            border: notice.type === "success" ? "1px solid #a7f3d0" : "1px solid #fecaca",
+            color: notice.type === "success" ? "#065f46" : "#991b1b",
+            fontSize: 13,
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          {notice.type === "success" ? <CheckCircle2 size={18} /> : <CircleAlert size={18} />}
           <span>{notice.message}</span>
-          <button onClick={() => setNotice(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
+          <button
+            onClick={() => setNotice(null)}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit", fontWeight: 700 }}
+          >
             ✕
           </button>
         </div>
       )}
 
       {/* Top Banner Overview */}
-      <section className="panel" style={{ padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "var(--navy)" }}>
-              Saluran Multi-Platform Terverifikasi (37 Platform Aktif)
-            </h2>
-            <p style={{ margin: 0, fontSize: 13, color: "#697b7c" }}>
-              Seluruh 37 akun aktif Anda siap untuk koneksi API langsung maupun Manual Assist (8 aset otomatis).
-            </p>
-          </div>
+      <section
+        style={{
+          background: "#fff",
+          border: "1px solid #e2e8f0",
+          borderRadius: 14,
+          padding: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 16,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        }}
+      >
+        <div>
+          <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800, color: "#0f172a" }}>
+            Saluran Multi-Platform Terverifikasi (37 Platform Aktif)
+          </h2>
+          <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
+            Kelola koneksi API resmi dan alur kerja Manual Assist 8-aset untuk 37 platform aktif Anda.
+          </p>
+        </div>
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#168f83", display: "block" }}>
-                {connectedTotal} Akun Terhubung
-              </span>
-              <span style={{ fontSize: 10, color: "#8a9899" }}>37 Platform Siap Pakai</span>
-            </div>
-            <Link href="/publish" className="primary-button" style={{ fontSize: 12, padding: "8px 16px" }}>
-              Ke Publish Center ↗
-            </Link>
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#168f83", display: "block" }}>
+              {connectedTotal} Akun Terhubung
+            </span>
+            <span style={{ fontSize: 11, color: "#64748b" }}>37 Platform Siap Pakai</span>
           </div>
+          <Link
+            href="/publish"
+            style={{
+              padding: "9px 18px",
+              background: "#168f83",
+              color: "#fff",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              boxShadow: "0 4px 12px rgba(22,143,131,0.25)",
+            }}
+          >
+            Ke Publish Center ↗
+          </Link>
         </div>
       </section>
 
       {/* Filter and Search Bar */}
       <section
-        className="panel"
         style={{
+          background: "#fff",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
           padding: "16px 20px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           gap: 16,
           flexWrap: "wrap",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
         }}
       >
-        <div className="channel-search" style={{ minWidth: 260 }}>
-          <Search size={16} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 280, flex: "1 1 280px" }}>
+          <Search size={16} color="#94a3b8" />
           <input
             placeholder="Cari platform (misal: Pinterest, ImgBB, Medium, Wattpad, Pixabay)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid #cbd5e1",
+              fontSize: 12,
+              outline: "none",
+            }}
           />
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <button
-            onClick={() => setFilter("all")}
-            className={filter === "all" ? "primary-button" : "text-button"}
-            style={{
-              padding: "4px 10px",
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: 600,
-              border: filter === "all" ? "none" : "1px solid var(--line)",
-              background: filter === "all" ? "var(--navy)" : "#fff",
-              color: filter === "all" ? "#fff" : "#697b7c",
-            }}
-          >
-            Semua (37)
-          </button>
-          {groups.map((g) => (
-            <button
-              key={g}
-              onClick={() => setFilter(g)}
-              className={filter === g ? "primary-button" : "text-button"}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 6,
-                fontSize: 11,
-                fontWeight: 600,
-                border: filter === g ? "none" : "1px solid var(--line)",
-                background: filter === g ? "var(--navy)" : "#fff",
-                color: filter === g ? "#fff" : "#697b7c",
-              }}
-            >
-              {labels[g]}
-            </button>
-          ))}
+          {groups.map((g) => {
+            const isSelected = filter === g;
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setFilter(g)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: isSelected ? 700 : 600,
+                  cursor: "pointer",
+                  border: isSelected ? "none" : "1px solid #e2e8f0",
+                  background: isSelected ? "#0f172a" : "#fff",
+                  color: isSelected ? "#fff" : "#475569",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {labels[g]}
+              </button>
+            );
+          })}
         </div>
       </section>
 
       {/* Grid of Verified Channels */}
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gap: 18,
+        }}
+      >
         {filtered.map((channel) => {
           const isConnected = channel.status === "connected";
           const isTesting = testingPlatform === channel.slug;
-          const guide = platformGuides[channel.slug] || defaultNoApiGuide;
 
           return (
             <div
               key={channel.slug}
-              className="panel"
               style={{
-                padding: 18,
+                background: isConnected ? "#fbfdfc" : "#fff",
+                border: isConnected ? "1.5px solid #168f83" : "1px solid #e2e8f0",
+                borderRadius: 14,
+                padding: 20,
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
-                gap: 14,
-                border: isConnected ? "1px solid #78c9be" : "1px solid var(--line)",
-                background: isConnected ? "#fbfdfc" : "#fff",
+                gap: 16,
+                boxShadow: isConnected ? "0 4px 14px rgba(22, 143, 131, 0.1)" : "0 1px 3px rgba(0,0,0,0.05)",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
               }}
             >
+              {/* Card Header */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <div>
-                    <h3 style={{ margin: "0 0 2px", fontSize: 16, fontWeight: 700, color: "var(--navy)" }}>
-                      {channel.name}
-                    </h3>
-                    <span style={{ fontSize: 11, color: "#8a9899" }}>{labels[channel.category] || channel.category}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: channel.color,
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: 17,
+                        boxShadow: `0 3px 8px ${channel.color}40`,
+                      }}
+                    >
+                      {channel.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 style={{ margin: "0 0 2px", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+                        {channel.name}
+                      </h3>
+                      <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+                        {labels[channel.category] || channel.category}
+                      </span>
+                    </div>
                   </div>
 
                   <span
                     style={{
                       fontSize: 10,
-                      fontWeight: 700,
+                      fontWeight: 800,
                       textTransform: "uppercase",
-                      padding: "2px 6px",
-                      borderRadius: 4,
-                      background: isConnected ? "#e6f7f3" : "#f0f4f4",
-                      color: isConnected ? "#159c8e" : "#697b7c",
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      background: isConnected ? "#ecfdf5" : "#f1f5f9",
+                      color: isConnected ? "#059669" : "#475569",
+                      border: isConnected ? "1px solid #a7f3d0" : "1px solid #e2e8f0",
                     }}
                   >
                     {isConnected ? "TERHUBUNG" : "SIAP PAKAI"}
@@ -733,47 +888,90 @@ export default function ChannelManager() {
                 </div>
 
                 {isConnected && channel.username && (
-                  <p style={{ margin: "0 0 8px", fontSize: 12, color: "#168f83", fontWeight: 600 }}>
-                    Akun: {channel.username}
-                  </p>
+                  <div style={{ background: "#f0fdf4", padding: "6px 10px", borderRadius: 6, marginBottom: 10, border: "1px solid #bbf7d0" }}>
+                    <p style={{ margin: 0, fontSize: 11, color: "#15803d", fontWeight: 700 }}>
+                      Akun: @{channel.username}
+                    </p>
+                  </div>
                 )}
 
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                {/* Capability Badges */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
                   {channel.api && (
-                    <span style={{ fontSize: 9, fontWeight: 700, background: "#eef2ff", color: "#3b5998", padding: "1px 5px", borderRadius: 3 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: "#eff6ff", color: "#1d4ed8", padding: "3px 7px", borderRadius: 4, border: "1px solid #bfdbfe" }}>
                       OFFICIAL API
                     </span>
                   )}
                   {channel.oauth && (
-                    <span style={{ fontSize: 9, fontWeight: 700, background: "#eef8f5", color: "#1a8f82", padding: "1px 5px", borderRadius: 3 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: "#f0fdfa", color: "#0f766e", padding: "3px 7px", borderRadius: 4, border: "1px solid #99f6e4" }}>
                       OAUTH 2.0
                     </span>
                   )}
                   {!channel.api && (
-                    <span style={{ fontSize: 9, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "1px 5px", borderRadius: 3 }}>
-                      TANPA API (MANUAL ASSIST)
+                    <span style={{ fontSize: 10, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "3px 7px", borderRadius: 4, border: "1px solid #bbf7d0" }}>
+                      MANUAL ASSIST (8 ASET)
                     </span>
                   )}
                 </div>
+
+                {/* Features Support List */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", fontSize: 11, color: "#475569", background: "#f8fafc", padding: "8px 12px", borderRadius: 8 }}>
+                  <div>📸 Gambar: <b>Didukung</b></div>
+                  <div>🎬 Video: <b>{channel.supportsVideo ? "Didukung" : "—"}</b></div>
+                  <div>📄 Artikel: <b>{channel.supportsArticle ? "Didukung" : "—"}</b></div>
+                  <div>🏷️ Tag & CTA: <b>Didukung</b></div>
+                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid #f0f4f4", paddingTop: 12 }}>
+              {/* Action Buttons Footer */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  borderTop: "1px solid #f1f5f9",
+                  paddingTop: 14,
+                }}
+              >
                 {isConnected ? (
                   <>
                     <button
+                      type="button"
                       onClick={() => handleTestConnection(channel)}
                       disabled={isTesting}
-                      className="text-button"
-                      style={{ fontSize: 11, color: "#168f83", border: "1px solid #168f83", padding: "4px 8px", borderRadius: 4 }}
+                      style={{
+                        padding: "6px 10px",
+                        fontSize: 11,
+                        borderRadius: 6,
+                        border: "1px solid #168f83",
+                        background: "#fff",
+                        color: "#168f83",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
                       {isTesting ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
                       Test
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDisconnect(channel)}
-                      className="text-button"
-                      style={{ fontSize: 11, color: "#cf1322", border: "1px solid #fcc", padding: "4px 8px", borderRadius: 4 }}
+                      style={{
+                        padding: "6px 10px",
+                        fontSize: 11,
+                        borderRadius: 6,
+                        border: "1px solid #fecaca",
+                        background: "#fff",
+                        color: "#dc2626",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
                       <Unplug size={12} /> Putus
                     </button>
@@ -781,18 +979,43 @@ export default function ChannelManager() {
                 ) : (
                   <>
                     <button
+                      type="button"
                       onClick={() => handleOpenConnect(channel)}
-                      className="primary-button"
-                      style={{ fontSize: 11, padding: "5px 12px", borderRadius: 5 }}
+                      style={{
+                        padding: "7px 14px",
+                        fontSize: 12,
+                        borderRadius: 7,
+                        border: "none",
+                        background: "#168f83",
+                        color: "#fff",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        boxShadow: "0 2px 6px rgba(22, 143, 131, 0.2)",
+                      }}
                     >
-                      <Key size={12} /> Hubungkan Akun
+                      <Key size={13} /> Hubungkan Akun
                     </button>
                     <button
+                      type="button"
                       onClick={() => setManualAssistChannel(channel)}
-                      className="text-button"
-                      style={{ fontSize: 11, color: "#2f54eb", border: "1px solid #d6e4ff", padding: "5px 8px", borderRadius: 5 }}
+                      style={{
+                        padding: "7px 10px",
+                        fontSize: 11,
+                        borderRadius: 7,
+                        border: "1px solid #bfdbfe",
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
-                      <HelpCircle size={12} /> Assist
+                      <HelpCircle size={13} /> Assist
                     </button>
                   </>
                 )}
@@ -802,10 +1025,17 @@ export default function ChannelManager() {
                     href={channel.portalUrl}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ marginLeft: "auto", color: "#8a9899", display: "flex", alignItems: "center" }}
-                    title="Buka situs platform"
+                    style={{
+                      marginLeft: "auto",
+                      color: "#94a3b8",
+                      display: "flex",
+                      alignItems: "center",
+                      padding: 4,
+                      borderRadius: 4,
+                    }}
+                    title={`Buka situs resmi ${channel.name}`}
                   >
-                    <ExternalLink size={14} />
+                    <ExternalLink size={15} />
                   </a>
                 )}
               </div>
