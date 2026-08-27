@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx tsx --test src/platforms/instagram/instagram.test.ts"
+    "test": "npx tsx --test src/platforms/**/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

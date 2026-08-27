@@ -79,14 +79,17 @@ const names: [string, string][] = [
 ];
 
 const uploadable = new Set(["Imgbox", "Postimages", "FreeImage.host", "ImgBB", "ImageBam", "Gifyu", "Imgur", "ImgPile"]);
+const apiPlatforms = new Set(["Instagram", "Pinterest", "Medium", "Imgbox"]);
+const oauthPlatforms = new Set(["Instagram", "Pinterest", "Medium"]);
+const publishPlatforms = new Set(["Instagram", "Pinterest", "Medium", "Imgbox"]);
 
 const initialChannels: Channel[] = names.map(([name, category]) => ({
   name,
   category,
-  api: name === "Instagram",
-  oauth: name === "Instagram",
-  publish: name === "Instagram",
-  upload: uploadable.has(name) || name === "Instagram",
+  api: apiPlatforms.has(name),
+  oauth: oauthPlatforms.has(name),
+  publish: publishPlatforms.has(name),
+  upload: uploadable.has(name) || apiPlatforms.has(name),
   status: "not_connected",
 }));
 
