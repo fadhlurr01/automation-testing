@@ -22,7 +22,7 @@ export const navigationItems: NavItem[] = [
   { label: "Campaigns", icon: Target, href: "/campaigns" },
   { label: "Publish Center", icon: Rocket, href: "/publish", badge: "Live" },
   { label: "Content Studio", icon: PenLine, href: "/content-studio" },
-  { label: "Channels", icon: Link2, href: "/channels", badge: "4" },
+  { label: "Channels", icon: Link2, href: "/channels", badge: "37" },
   { label: "Calendar", icon: CalendarDays, href: "/calendar" },
   { label: "Media Library", icon: Library, href: "/media" },
   { label: "AI Studio", icon: Sparkles, href: "/ai-studio" },
