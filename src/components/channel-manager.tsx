@@ -18,7 +18,9 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
-  Share2,
+  ShieldAlert,
+  ShieldCheck,
+  UserPlus,
 } from "lucide-react";
 import ManualAssistModal from "@/components/manual-assist-modal";
 import { PreparedManualContent } from "@/lib/manual-assist/types";
@@ -128,12 +130,12 @@ const defaultNoApiGuide = {
   portalName: "Direct Web & Manual Assist",
   portalUrl: "",
   steps: [
-    "Platform ini TIDAK memerlukan API Key atau akun Developer berbayar.",
-    "Cukup masukkan Nama Akun / Username Anda pada form di bawah untuk registrasi.",
-    "Saat Anda ingin mempublikasikan konten, sistem akan menyiapkan 8 aset lengkap (Gambar HD, Judul, Deskripsi, Caption, Hashtag, Keywords, CTA, Link).",
-    "Klik tombol [Salin] dan [Buka Platform] untuk memposting dalam 5 detik dengan aman tanpa risiko banned.",
+    "Platform ini TIDAK memiliki API publik gratis atau melarang penggunaan bot otomatis.",
+    "Jangan mencari API Key. Cukup daftarkan Nama Akun / Username Anda di bawah.",
+    "Saat Anda ingin memposting, sistem akan otomatis menyiapkan 8 aset lengkap (Gambar HD, Judul, Deskripsi, Caption, Hashtag, Keywords, CTA, Link).",
+    "Gunakan tombol [Salin] dan [Buka Platform] untuk mengunggah secara resmi dalam 5 detik.",
   ],
-  note: "Mode Manual Assist 100% aman, tidak melanggar aturan platform, dan tidak memerlukan biaya langganan API tambahan.",
+  note: "Sangat aman 100% dan bebas dari risiko banned/blokir bot.",
 };
 
 // 37 Verified User Platforms with Distinct Brand Colors
@@ -148,16 +150,17 @@ const verifiedPlatformDefinitions: Array<{
   supportsVideo?: boolean;
   supportsArticle?: boolean;
 }> = [
-  // Social Media
+  // Social Media (Official API for Pinterest, Instagram, Facebook)
   { name: "Pinterest", slug: "pinterest", category: "social", color: "#E60023", portalUrl: "https://www.pinterest.com/", api: true, oauth: true, supportsVideo: true },
   { name: "Instagram", slug: "instagram", category: "social", color: "#E1306C", portalUrl: "https://www.instagram.com/", api: true, oauth: true, supportsVideo: true },
   { name: "Facebook", slug: "facebook", category: "social", color: "#1877F2", portalUrl: "https://www.facebook.com/", api: true, oauth: true, supportsVideo: true },
+  // Non-API Social Media (Manual Assist)
   { name: "X / Twitter", slug: "twitter", category: "social", color: "#0f1419", portalUrl: "https://x.com/", supportsVideo: true },
   { name: "Minds", slug: "minds", category: "social", color: "#EBB300", portalUrl: "https://www.minds.com/", supportsVideo: true },
   { name: "Flipboard", slug: "flipboard", category: "social", color: "#E12828", portalUrl: "https://flipboard.com/", supportsArticle: true },
   { name: "Tripadvisor", slug: "tripadvisor", category: "social", color: "#00AA6C", portalUrl: "https://www.tripadvisor.co.id/" },
 
-  // Blog & Publishing
+  // Blog & Publishing (Medium Official API, others Manual Assist)
   { name: "Medium", slug: "medium", category: "blog_publishing", color: "#000000", portalUrl: "https://medium.com/", api: true, oauth: true, supportsArticle: true },
   { name: "Wattpad", slug: "wattpad", category: "blog_publishing", color: "#FF6122", portalUrl: "https://www.wattpad.com/", supportsArticle: true },
   { name: "Wix", slug: "wix", category: "blog_publishing", color: "#0C6EFC", portalUrl: "https://id.wix.com/", supportsArticle: true },
@@ -166,7 +169,7 @@ const verifiedPlatformDefinitions: Array<{
   { name: "LiveJournal", slug: "livejournal", category: "blog_publishing", color: "#004359", portalUrl: "https://livejournal.com/", supportsArticle: true },
   { name: "FlipHTML5", slug: "fliphtml5", category: "blog_publishing", color: "#2B82EC", portalUrl: "https://fliphtml5.com/", supportsArticle: true },
 
-  // Image & Media Hosting
+  // Image & Media Hosting (ImgBB Official API, others Manual Assist)
   { name: "ImgBB", slug: "imgbb", category: "image_hosting", color: "#206095", portalUrl: "https://imgbb.com/", api: true },
   { name: "Postimages", slug: "postimages", category: "image_hosting", color: "#2B8A3E", portalUrl: "https://postimages.org/" },
   { name: "Publitio", slug: "publitio", category: "image_hosting", color: "#FF6B00", portalUrl: "https://publit.io/", supportsVideo: true },
@@ -182,17 +185,17 @@ const verifiedPlatformDefinitions: Array<{
   { name: "Imgur", slug: "imgur", category: "image_hosting", color: "#1BB76E", portalUrl: "https://imgur.com/", supportsVideo: true },
   { name: "Google Photos", slug: "googlephotos", category: "image_hosting", color: "#4285F4", portalUrl: "https://photos.google.com/", supportsVideo: true },
 
-  // Portfolio, Curation & Discovery
+  // Portfolio, Curation & Discovery (Manual Assist)
   { name: "Behance", slug: "behance", category: "portfolio", color: "#1769FF", portalUrl: "https://behance.net/", supportsArticle: true },
   { name: "500px", slug: "500px", category: "portfolio", color: "#000000", portalUrl: "https://500px.com/" },
   { name: "Dropmark", slug: "dropmark", category: "portfolio", color: "#3D5AFE", portalUrl: "https://dropmark.com/", supportsArticle: true },
 
-  // Community, Directory & Experiences
+  // Community, Directory & Experiences (Manual Assist)
   { name: "Locanto", slug: "locanto", category: "other", color: "#E64A19", portalUrl: "https://locanto.co.id/" },
   { name: "Klook", slug: "klook", category: "other", color: "#FF5B00", portalUrl: "https://www.klook.com/" },
   { name: "Glints", slug: "glints", category: "other", color: "#ED1C24", portalUrl: "https://glints.com/" },
 
-  // Stock Visual & Asset Platforms
+  // Stock Visual & Asset Platforms (Manual Assist)
   { name: "Pixabay", slug: "pixabay", category: "stock_visuals", color: "#00AB6B", portalUrl: "https://pixabay.com/" },
   { name: "Unsplash", slug: "unsplash", category: "stock_visuals", color: "#111111", portalUrl: "https://unsplash.com/" },
   { name: "Pexels", slug: "pexels", category: "stock_visuals", color: "#05A081", portalUrl: "https://www.pexels.com/id-id/" },
@@ -300,7 +303,7 @@ export default function ChannelManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           platformSlug: activeModalChannel.slug,
-          token: modalToken.trim(),
+          token: activeModalChannel.api ? modalToken.trim() : undefined,
           accountName: modalAccountName.trim() || activeModalChannel.name,
           username: modalUsername.trim() || undefined,
         }),
@@ -310,14 +313,14 @@ export default function ChannelManager() {
 
       if (response.ok) {
         setNotice({
-          message: `✅ ${activeModalChannel.name} berhasil terhubung! Siap untuk distribusi konten.`,
+          message: `✅ Akun ${activeModalChannel.name} berhasil didaftarkan dan siap untuk publikasi!`,
           type: "success",
         });
         setActiveModalChannel(null);
         await loadConnected();
       } else {
         setNotice({
-          message: result.error || `Gagal menghubungkan ${activeModalChannel.name}.`,
+          message: result.error || `Gagal mendaftarkan ${activeModalChannel.name}.`,
           type: "error",
         });
       }
@@ -417,7 +420,7 @@ export default function ChannelManager() {
         />
       )}
 
-      {/* Direct Connection Modal with Step-by-Step API Guide */}
+      {/* Direct Connection Modal */}
       {activeModalChannel && (() => {
         const guide = platformGuides[activeModalChannel.slug] || defaultNoApiGuide;
 
@@ -469,7 +472,7 @@ export default function ChannelManager() {
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>
-                      Hubungkan {activeModalChannel.name}
+                      {guide.requiresApi ? `Hubungkan API ${activeModalChannel.name}` : `Daftarkan Akun ${activeModalChannel.name}`}
                     </h3>
                     <span style={{ fontSize: 11, color: "#64748b" }}>
                       {labels[activeModalChannel.category] || activeModalChannel.category}
@@ -491,72 +494,98 @@ export default function ChannelManager() {
                 </button>
               </div>
 
-              {/* Step-by-Step Guide Accordion */}
-              <div
-                style={{
-                  background: guide.requiresApi ? "#f0f9ff" : "#f6fdfb",
-                  border: guide.requiresApi ? "1px solid #bae6fd" : "1px solid #bbf7d0",
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                }}
-              >
+              {/* Guide Accordion or Anti-Bot Warning */}
+              {guide.requiresApi ? (
                 <div
-                  onClick={() => setShowGuideInModal(!showGuideInModal)}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    color: guide.requiresApi ? "#0369a1" : "#15803d",
+                    background: "#f0f9ff",
+                    border: "1px solid #bae6fd",
+                    borderRadius: 10,
+                    padding: "12px 14px",
                   }}
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <BookOpen size={15} />
-                    {guide.requiresApi
-                      ? "📖 Panduan Langkah Mendapatkan Token / API Key"
-                      : "ℹ️ Informasi: Tidak Memerlukan Kunci API"}
-                  </span>
-                  {showGuideInModal ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                </div>
-
-                {showGuideInModal && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: "#334155", display: "grid", gap: 8 }}>
-                    <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5 }}>
-                      {guide.steps.map((st, idx) => (
-                        <li key={idx} style={{ marginBottom: 4 }}>
-                          {st}
-                        </li>
-                      ))}
-                    </ol>
-
-                    {guide.portalUrl && (
-                      <div style={{ marginTop: 4 }}>
-                        <a
-                          href={guide.portalUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            color: "#0284c7",
-                            fontWeight: 700,
-                            textDecoration: "underline",
-                          }}
-                        >
-                          Buka Portal Developer {activeModalChannel.name} ↗
-                        </a>
-                      </div>
-                    )}
-
-                    <div style={{ marginTop: 2, fontStyle: "italic", color: "#64748b", fontSize: 11 }}>
-                      💡 {guide.note}
-                    </div>
+                  <div
+                    onClick={() => setShowGuideInModal(!showGuideInModal)}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: "#0369a1",
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <BookOpen size={15} />
+                      📖 Panduan Langkah Mendapatkan Token / API Key Resmi
+                    </span>
+                    {showGuideInModal ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                   </div>
-                )}
-              </div>
+
+                  {showGuideInModal && (
+                    <div style={{ marginTop: 10, fontSize: 12, color: "#334155", display: "grid", gap: 8 }}>
+                      <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5 }}>
+                        {guide.steps.map((st, idx) => (
+                          <li key={idx} style={{ marginBottom: 4 }}>
+                            {st}
+                          </li>
+                        ))}
+                      </ol>
+
+                      {guide.portalUrl && (
+                        <div style={{ marginTop: 4 }}>
+                          <a
+                            href={guide.portalUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              color: "#0284c7",
+                              fontWeight: 700,
+                              textDecoration: "underline",
+                            }}
+                          >
+                            Buka Portal Developer {activeModalChannel.name} ↗
+                          </a>
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: 2, fontStyle: "italic", color: "#64748b", fontSize: 11 }}>
+                        💡 {guide.note}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Non-API Platform Anti-Bot & Safety Warning */
+                <div
+                  style={{
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                    borderRadius: 10,
+                    padding: "14px",
+                    display: "grid",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#b45309", fontWeight: 800, fontSize: 13 }}>
+                    <ShieldAlert size={18} />
+                    <span>🛡️ Peringatan Keamanan & Anti-Bot Protection</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>
+                    Platform <b>{activeModalChannel.name}</b> tidak menyediakan API posting publik gratis dan memiliki sistem proteksi bot / CAPTCHA yang ketat.
+                  </p>
+                  <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #fef3c7", fontSize: 11, color: "#78350f" }}>
+                    <b>⚠️ Jangan gunakan script robot / botting ilegal</b>: Akun Anda berisiko terdeteksi dan di-suspend atau terkena banned permanen oleh platform.
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, color: "#15803d", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                    <ShieldCheck size={16} /> Solusi Aman 100%: Sistem akan menyiapkan 8 aset lengkap dan tombol salin 1-klik untuk publikasi resmi tanpa risiko banned.
+                  </p>
+                </div>
+              )}
 
               {/* Form Input */}
               <form onSubmit={handleDirectConnectSubmit} style={{ display: "grid", gap: 14 }}>
@@ -599,7 +628,8 @@ export default function ChannelManager() {
                   />
                 </div>
 
-                {activeModalChannel.api ? (
+                {/* ONLY SHOW TOKEN INPUT IF PLATFORM HAS OFFICIAL API */}
+                {activeModalChannel.api && (
                   <div>
                     <label className="field-label" style={{ display: "block", marginBottom: 6, fontWeight: 700, fontSize: 12, color: "#334155" }}>
                       Integration Token / API Key ({activeModalChannel.name})
@@ -621,12 +651,6 @@ export default function ChannelManager() {
                     <small style={{ color: "#64748b", fontSize: 11, display: "block", marginTop: 4 }}>
                       🔒 Token disimpan terenkripsi di server (AES-256-GCM) dan aman.
                     </small>
-                  </div>
-                ) : (
-                  <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "#475569", lineHeight: 1.4 }}>
-                      ✅ <b>Platform Siap Pakai</b>: Konten siap didistribusikan melalui <b>Manual Assist</b> tanpa perlu memasukkan token API.
-                    </p>
                   </div>
                 )}
 
@@ -665,7 +689,7 @@ export default function ChannelManager() {
                     }}
                   >
                     {connecting ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-                    {connecting ? "Menghubungkan..." : "Konfirmasi & Simpan Akun"}
+                    {connecting ? "Menyimpan..." : activeModalChannel.api ? "Konfirmasi & Hubungkan API" : "Simpan Akun Saya"}
                   </button>
                 </div>
               </form>
@@ -728,7 +752,7 @@ export default function ChannelManager() {
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
           <div style={{ textAlign: "right" }}>
             <span style={{ fontSize: 12, fontWeight: 800, color: "#168f83", display: "block" }}>
-              {connectedTotal} Akun Terhubung
+              {connectedTotal} Akun Terdaftar
             </span>
             <span style={{ fontSize: 11, color: "#64748b" }}>37 Platform Siap Pakai</span>
           </div>
@@ -897,19 +921,18 @@ export default function ChannelManager() {
 
                 {/* Capability Badges */}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                  {channel.api && (
+                  {channel.api ? (
                     <span style={{ fontSize: 10, fontWeight: 700, background: "#eff6ff", color: "#1d4ed8", padding: "3px 7px", borderRadius: 4, border: "1px solid #bfdbfe" }}>
                       OFFICIAL API
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 10, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "3px 7px", borderRadius: 4, border: "1px solid #bbf7d0" }}>
+                      MANUAL ASSIST (ANTI-BOT SAFE)
                     </span>
                   )}
                   {channel.oauth && (
                     <span style={{ fontSize: 10, fontWeight: 700, background: "#f0fdfa", color: "#0f766e", padding: "3px 7px", borderRadius: 4, border: "1px solid #99f6e4" }}>
                       OAUTH 2.0
-                    </span>
-                  )}
-                  {!channel.api && (
-                    <span style={{ fontSize: 10, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "3px 7px", borderRadius: 4, border: "1px solid #bbf7d0" }}>
-                      MANUAL ASSIST (8 ASET)
                     </span>
                   )}
                 </div>
@@ -996,7 +1019,8 @@ export default function ChannelManager() {
                         boxShadow: "0 2px 6px rgba(22, 143, 131, 0.2)",
                       }}
                     >
-                      <Key size={13} /> Hubungkan Akun
+                      {channel.api ? <Key size={13} /> : <UserPlus size={13} />}
+                      {channel.api ? "Hubungkan API" : "Simpan Akun"}
                     </button>
                     <button
                       type="button"

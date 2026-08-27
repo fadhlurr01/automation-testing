@@ -121,21 +121,23 @@ export default function ManualAssistModal({
           </button>
         </div>
 
-        {/* Manual Assist Banner */}
+        {/* Anti-Bot Security Banner */}
         <div
           style={{
             padding: "12px 16px",
             borderRadius: 8,
-            background: "#fafbfd",
-            border: "1px solid #d6e4ff",
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
             display: "flex",
             alignItems: "center",
             gap: 12,
           }}
         >
-          <HelpCircle size={20} color="#2f54eb" />
-          <p style={{ margin: 0, fontSize: 12, color: "#1d39c4", lineHeight: 1.5, fontWeight: 500 }}>
-            Content prepared. Final publication must be completed manually on the external platform.
+          <div style={{ color: "#b45309", display: "flex", alignItems: "center" }}>
+            <Sparkles size={20} />
+          </div>
+          <p style={{ margin: 0, fontSize: 12, color: "#92400e", lineHeight: 1.5, fontWeight: 500 }}>
+            <b>🛡️ Perlindungan Akun Anti-Bot ({platformName}):</b> 8 aset konten telah disiapkan otomatis oleh AI. Mengunggah melalui tombol <b>[Buka Platform]</b> menjamin akun Anda 100% resmi, aman, dan bebas dari risiko terdeteksi robot/banned.
           </p>
         </div>
 
