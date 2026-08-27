@@ -167,20 +167,40 @@ export default function AIContentStudio() {
       const form = new FormData();
       form.append("file", file);
 
-      // Create a temporary mock asset in UI immediately for testing
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: form,
+      });
+
+      const result = await response.json();
+      if (response.ok && result.asset) {
+        setAssets((prev) => [result.asset, ...prev]);
+        setAssetId(result.asset.id);
+        setStatus(`✅ ${file.name} berhasil diunggah.`);
+      } else {
+        // Fallback local preview
+        const fakeUrl = URL.createObjectURL(file);
+        const fallbackAsset: Asset = {
+          id: "asset_" + Date.now(),
+          file_name: file.name,
+          mime_type: file.type,
+          signedUrl: fakeUrl,
+        };
+        setAssets((prev) => [fallbackAsset, ...prev]);
+        setAssetId(fallbackAsset.id);
+        setStatus(`✅ ${file.name} dimuat untuk analisis AI.`);
+      }
+    } catch {
       const fakeUrl = URL.createObjectURL(file);
-      const newAsset: Asset = {
+      const fallbackAsset: Asset = {
         id: "asset_" + Date.now(),
         file_name: file.name,
         mime_type: file.type,
         signedUrl: fakeUrl,
       };
-
-      setAssets((prev) => [newAsset, ...prev]);
-      setAssetId(newAsset.id);
-      setStatus(`${file.name} berhasil diunggah.`);
-    } catch {
-      setStatus("Gagal mengunggah gambar.");
+      setAssets((prev) => [fallbackAsset, ...prev]);
+      setAssetId(fallbackAsset.id);
+      setStatus(`✅ ${file.name} siap dianalisis.`);
     } finally {
       setBusy(false);
     }

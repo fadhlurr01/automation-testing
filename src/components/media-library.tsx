@@ -17,7 +17,43 @@ export default function MediaLibrary() {
   useEffect(() => { fetch("/api/media").then(async (response) => { if (response.ok) setAssets((await response.json()).assets); }); }, []);
   const visibleAssets = useMemo(() => assets.filter((asset) => (filter === "all" || asset.mime_type.startsWith(`${filter}/`)) && asset.file_name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sort === "oldest" ? a.created_at.localeCompare(b.created_at) : a.file_name.localeCompare(b.file_name)), [assets, filter, query, sort]);
   function inspect(file: File) { return new Promise<{ width?: number; height?: number; duration?: number }>((resolve) => { if (file.type.startsWith("image/")) { const image = new window.Image(); image.onload = () => resolve({ width: image.width, height: image.height }); image.src = URL.createObjectURL(file); } else { const video = document.createElement("video"); video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration }); video.src = URL.createObjectURL(file); } }); }
-  async function uploadFiles(files: FileList | File[]) { for (const file of Array.from(files)) { if (![...imageTypes, ...videoTypes].includes(file.type)) { setStatus(`${file.name}: file type is not supported.`); continue; } const max = file.type.startsWith("video/") ? 250 * 1024 * 1024 : 50 * 1024 * 1024; if (file.size > max) { setStatus(`${file.name}: maximum size is ${file.type.startsWith("video/") ? "250 MB" : "50 MB"}.`); continue; } try { setStatus(`Uploading ${file.name}...`); setProgress(20); const supabase = createSupabaseBrowserClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) throw new Error("Please sign in before uploading media."); const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-"); const path = `${user.id}/${crypto.randomUUID()}-${safeName}`; const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type, upsert: false }); if (error) throw error; setProgress(75); const metadata = await inspect(file); const response = await fetch("/api/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ storagePath: path, filename: file.name, mimeType: file.type, fileSize: file.size, ...metadata }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Could not save media metadata."); setAssets((current) => [result.asset, ...current]); setProgress(100); setStatus(`${file.name} uploaded successfully.`); } catch (error) { setStatus(error instanceof Error ? error.message : "Upload failed."); } } setTimeout(() => setProgress(0), 700); }
+  async function uploadFiles(files: FileList | File[]) {
+    for (const file of Array.from(files)) {
+      if (![...imageTypes, ...videoTypes].includes(file.type)) {
+        setStatus(`${file.name}: tipe file tidak didukung.`);
+        continue;
+      }
+      const max = file.type.startsWith("video/") ? 250 * 1024 * 1024 : 50 * 1024 * 1024;
+      if (file.size > max) {
+        setStatus(`${file.name}: ukuran maksimum adalah ${file.type.startsWith("video/") ? "250 MB" : "50 MB"}.`);
+        continue;
+      }
+
+      try {
+        setStatus(`Mengunggah ${file.name}...`);
+        setProgress(30);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        setProgress(60);
+        const response = await fetch("/api/media/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error ?? "Gagal mengunggah media.");
+
+        setProgress(100);
+        setAssets((current) => [result.asset, ...current]);
+        setStatus(`✅ ${file.name} berhasil diunggah.`);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Upload gagal.");
+      }
+    }
+    setTimeout(() => setProgress(0), 700);
+  }
   async function remove(id: string) { if (!confirm("Delete this media asset?")) return; const response = await fetch("/api/media", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); if (response.ok) { setAssets((current) => current.filter((asset) => asset.id !== id)); setSelected((current) => current.filter((item) => item !== id)); } }
   async function rename(id: string) { if (!renameValue.trim()) return; const response = await fetch("/api/media", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, filename: renameValue.trim() }) }); if (response.ok) setAssets((current) => current.map((asset) => asset.id === id ? { ...asset, file_name: renameValue.trim() } : asset)); setRenameId(null); }
   return <section className="media-library"><div className="media-toolbar"><div className="media-search"><Search size={17} /><input placeholder="Search media..." value={query} onChange={(event) => setQuery(event.target.value)} /></div><select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter media"><option value="all">All media</option><option value="image">Images</option><option value="video">Videos</option></select><select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort media"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name">Name</option></select><button className="primary-button" onClick={() => inputRef.current?.click()}><UploadCloud size={17} />Upload media</button><input ref={inputRef} type="file" hidden multiple accept={`${imageTypes.join(",")},${videoTypes.join(",")}`} onChange={(event) => event.target.files && uploadFiles(event.target.files)} /></div>
