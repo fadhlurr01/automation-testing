@@ -19,6 +19,9 @@ import {
   Plus,
   Layers,
   PenTool,
+  Globe,
+  Calendar,
+  Zap,
 } from "lucide-react";
 
 type Content = { id: string; title: string | null; caption: string | null };
@@ -37,6 +40,17 @@ const supportedPlatforms = [
   { slug: "instagram", name: "Instagram", type: "Reels & Photos", color: "#b03a7a", bg: "#fcedf5" },
 ];
 
+const timezones = [
+  { value: "Asia/Jakarta", label: "Asia/Jakarta (WIB · UTC+7)" },
+  { value: "Asia/Makassar", label: "Asia/Makassar (WITA · UTC+8)" },
+  { value: "Asia/Jayapura", label: "Asia/Jayapura (WIT · UTC+9)" },
+  { value: "UTC", label: "UTC (Coordinated Universal Time)" },
+  { value: "Asia/Singapore", label: "Asia/Singapore (SGT · UTC+8)" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo (JST · UTC+9)" },
+  { value: "Europe/London", label: "Europe/London (GMT/BST)" },
+  { value: "America/New_York", label: "America/New York (EST/EDT)" },
+];
+
 export default function CampaignBuilder({ campaignId }: { campaignId?: string }) {
   const router = useRouter();
 
@@ -45,10 +59,16 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
   const [media, setMedia] = useState<Media[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
 
-  // Step 1: Campaign Details
+  // Step 1: Campaign Details & Scheduling
   const [name, setName] = useState(campaignId ? "Campaign draft" : "");
   const [description, setDescription] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [publishMode, setPublishMode] = useState<"now" | "schedule">("schedule");
+  const [scheduleDate, setScheduleDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  });
+  const [scheduleTime, setScheduleTime] = useState("09:00");
+  const [timezone, setTimezone] = useState("Asia/Jakarta");
 
   // Step 2: Content (Direct or Library)
   const [contentMode, setContentMode] = useState<"direct" | "saved">("direct");
@@ -97,21 +117,23 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
       return;
     }
 
-    if (status === "scheduled" && !scheduledAt) {
-      setNotice({ message: "Please select a scheduled date and time.", type: "error" });
-      return;
-    }
-
     setBusy(true);
     setNotice(null);
 
     try {
+      const scheduledIso =
+        publishMode === "schedule" && scheduleDate && scheduleTime
+          ? new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString()
+          : status === "approved"
+          ? new Date().toISOString()
+          : null;
+
       const payload: Record<string, unknown> = {
         name,
         description,
         status,
-        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        scheduledAt: scheduledIso,
+        timezone,
         platformSlugs: selectedPlatforms,
       };
 
@@ -140,8 +162,23 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
       const result = await response.json();
 
       if (response.ok && result.success) {
+        // If scheduled or approved, create scheduled publishing jobs in backend
+        if (result.campaign?.id && (status === "scheduled" || status === "approved")) {
+          await fetch("/api/publishing/jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              campaignId: result.campaign.id,
+              publishMode: status === "approved" ? "now" : "schedule",
+              date: scheduleDate,
+              time: scheduleTime,
+              timezone,
+            }),
+          });
+        }
+
         setNotice({
-          message: `Campaign "${name}" saved successfully as ${status.toUpperCase()}!`,
+          message: `Campaign "${name}" saved successfully as ${status.toUpperCase()} (${timezone})!`,
           type: "success",
         });
       } else {
@@ -180,10 +217,10 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
           >
             <ArrowLeft size={15} /> Back to Campaigns
           </Link>
-          <p className="eyebrow">CAMPAIGN BUILDER</p>
-          <h1>{campaignId ? "Review campaign" : "Create campaign"}</h1>
+          <p className="eyebrow">CAMPAIGN SCHEDULER</p>
+          <h1>{campaignId ? "Review campaign" : "Create & schedule campaign"}</h1>
           <p className="intro">
-            Define content, attach media, select publishing channels, and schedule execution.
+            Set campaign schedule in your local timezone, define content, and queue background workers.
           </p>
         </div>
         <div className="campaign-actions">
@@ -197,7 +234,7 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
           </button>
           <button className="primary-button" onClick={() => save("approved")} disabled={busy || !canSchedule}>
             <Send size={15} />
-            Publish All
+            Publish Now
           </button>
         </div>
       </header>
@@ -208,17 +245,30 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
           <span>{notice.message}</span>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             {notice.type === "success" && (
-              <Link
-                href="/campaigns"
-                style={{
-                  color: "#187a6f",
-                  fontWeight: 700,
-                  fontSize: 11,
-                  textDecoration: "underline",
-                }}
-              >
-                View Campaigns
-              </Link>
+              <>
+                <Link
+                  href="/calendar"
+                  style={{
+                    color: "#187a6f",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    textDecoration: "underline",
+                  }}
+                >
+                  View in Calendar
+                </Link>
+                <Link
+                  href="/campaigns"
+                  style={{
+                    color: "#187a6f",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    textDecoration: "underline",
+                  }}
+                >
+                  Campaigns List
+                </Link>
+              </>
             )}
             <button onClick={() => setNotice(null)} aria-label="Dismiss notice">
               Dismiss
@@ -228,29 +278,119 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
       )}
 
       <div className="campaign-layout">
-        {/* Left Form: Details, Content, Media */}
+        {/* Left Form: Details, Scheduling, Content, Media */}
         <section className="campaign-form">
-          {/* Step 01: Details */}
+          {/* Step 01: Details & Scheduling */}
           <div className="campaign-step">
             <span>01</span>
             <div>
-              <h2>Campaign details</h2>
-              <p>Name your campaign and set an optional schedule.</p>
+              <h2>Campaign Details & Timing</h2>
+              <p>Name your campaign and choose when it will be published.</p>
             </div>
           </div>
+
           <input
             className="campaign-name"
             placeholder="Campaign name (e.g. Summer Promo, Product Update)"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <input
-            className="campaign-name"
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            aria-label="Schedule date and time"
-          />
+
+          {/* Publish Now vs Schedule Mode Toggle */}
+          <div style={{ display: "flex", gap: 8, margin: "10px 0 14px" }}>
+            <button
+              type="button"
+              onClick={() => setPublishMode("now")}
+              className={publishMode === "now" ? "primary-button" : "text-button"}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 6,
+                fontSize: 11,
+                fontWeight: 600,
+                border: publishMode === "now" ? "none" : "1px solid var(--line)",
+                background: publishMode === "now" ? "var(--navy)" : "#fff",
+                color: publishMode === "now" ? "#fff" : "#697b7c",
+              }}
+            >
+              <Zap size={13} /> Publish Now
+            </button>
+            <button
+              type="button"
+              onClick={() => setPublishMode("schedule")}
+              className={publishMode === "schedule" ? "primary-button" : "text-button"}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 6,
+                fontSize: 11,
+                fontWeight: 600,
+                border: publishMode === "schedule" ? "none" : "1px solid var(--line)",
+                background: publishMode === "schedule" ? "var(--navy)" : "#fff",
+                color: publishMode === "schedule" ? "#fff" : "#697b7c",
+              }}
+            >
+              <Calendar size={13} /> Schedule for Later
+            </button>
+          </div>
+
+          {publishMode === "schedule" && (
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 8,
+                background: "#f9fbfa",
+                border: "1px solid #e0ebe9",
+                display: "grid",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label className="field-label">Publish Date</label>
+                  <input
+                    type="date"
+                    className="campaign-name"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    style={{ background: "#fff" }}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Publish Time</label>
+                  <input
+                    type="time"
+                    className="campaign-name"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                    style={{ background: "#fff" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">Timezone (Default: Asia/Jakarta)</label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 6,
+                    border: "1px solid var(--line)",
+                    padding: "0 10px",
+                    fontSize: 12,
+                    background: "#fff",
+                  }}
+                >
+                  {timezones.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Step 02: Content */}
           <div className="campaign-step" style={{ marginTop: 24 }}>
@@ -443,7 +583,7 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
           )}
         </section>
 
-        {/* Right Side: Channel Selection & Preview */}
+        {/* Right Side: Channel Selection & Readiness Preview */}
         <section className="campaign-side">
           <div className="campaign-step">
             <span>04</span>
@@ -494,8 +634,8 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
             <div className="campaign-step">
               <span>05</span>
               <div>
-                <h2>Campaign readiness</h2>
-                <p>Status before approval and scheduling</p>
+                <h2>Campaign Schedule & Readiness</h2>
+                <p>Scheduled execution: {publishMode === "schedule" ? `${scheduleDate} ${scheduleTime} (${timezone})` : "Instant Publish"}</p>
               </div>
             </div>
 
@@ -505,8 +645,8 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
                 <span>Targets</span>
               </div>
               <div className="ready">
-                <b>{selectedPlatforms.length}</b>
-                <span>Configured</span>
+                <b>{timezone.split("/")[1] || timezone}</b>
+                <span>Timezone</span>
               </div>
               <div className="manual">
                 <b>{canSaveDraft ? "OK" : "--"}</b>
@@ -522,7 +662,7 @@ export default function CampaignBuilder({ campaignId }: { campaignId?: string })
               {canSchedule ? (
                 <>
                   <Check size={15} color="#159c8e" />
-                  <span>Campaign is configured and ready to save or schedule.</span>
+                  <span>Campaign is configured for {publishMode === "now" ? "immediate publish" : "automated schedule"}.</span>
                 </>
               ) : (
                 <>
